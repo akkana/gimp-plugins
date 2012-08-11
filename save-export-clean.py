@@ -46,26 +46,17 @@ def python_export_clean(img, drawable) :
     pdb.gimp_image_clean_all(img)
 
 def choose_likely_save_dir() :
-    # Choose the most popular path where currently open files live.
-    # (There's got to be some cleverer, more pythonic way of doing this.)
-    # Set up a dictionary of all the directory paths we've seen:
-    dirpaths = {}
+    counts = collections.Counter()
     for img in gimp.image_list() :
         if img.filename :
-            d = os.path.dirname(img.filename)
-            if d in dirpaths.keys() :
-                dirpaths[d] += 1
-            else :
-                dirpaths[d] = 1
-
-    # Now find the dictionary entry with the biggest value
-    popular_path = None
-    uses = 0
-    for key in dirpaths.keys() :
-        if dirpaths[key] > uses :
-            uses = dirpaths[key]
-            popular_path = key
-    return popular_path
+            counts[os.path.dirname(img.filename)] += 1
+    
+    print "Counts:", counts
+    print counts.most_common(1)
+    try :
+        return counts.most_common(1)[0][0]
+    except :
+        return None
 
 register(
         "python_fu_export_clean",
