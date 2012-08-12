@@ -6,7 +6,7 @@
 # Warning: this does not show a lot of extra dialogs, etc. or warn you
 # if you're about to overwrite something! Use with caution.
 
-# Copyright 2009 by Akkana Peck, http://www.shallowsky.com/software/
+# Copyright 2012 by Akkana Peck, http://www.shallowsky.com/software/
 # You may use and distribute this plug-in under the terms of the GPL v2
 # or, at your option, any later GPL version.
 
@@ -64,7 +64,7 @@ register(
         "Save or export the current image, then mark it clean.",
         "Akkana Peck",
         "Akkana Peck",
-        "20012",
+        "2012",
         "Save/Export clean",
         "*",
         [
