@@ -51,8 +51,6 @@ def choose_likely_save_dir() :
         if img.filename :
             counts[os.path.dirname(img.filename)] += 1
     
-    print "Counts:", counts
-    print counts.most_common(1)
     try :
         return counts.most_common(1)[0][0]
     except :
