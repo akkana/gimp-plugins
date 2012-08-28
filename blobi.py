@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from gimpfu import *
+
 def python_blobify(img, layer, blur) :
     pdb.gimp_undo_push_group_start(img)
 
