@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 # Export a copy of the current image, scaled to a different size.
+# It's like "Save a copy" only it remembers to re-scale each time
+# back to whatever scale you used on the last export --
+# like if you want to keep a thumbnail or a
+# smaller web version current as you're editing the master.
 
 # Copyright 2012 by Akkana Peck, http://www.shallowsky.com/software/
 # You may use and distribute this plug-in under the terms of the GPL v2
