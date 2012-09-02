@@ -1,0 +1,24 @@
+Change Log:
+
+10/20/2007: 0.5
+  Add Printer fudge factor to label page script, and make the
+  install documentation a bit clearer.
+
+12/4/2006: 0.4
+  Changes needed to run in Tiny-Fu and GIMP 2.3.
+  Fix a page size bug: label page was choosing A4 instead of Letter.
+  Add a "Transparent?" option to Make Label Page.
+
+5/23/2006: 0.3
+  Use Copy Visible so that the label page can handle XCF labels with
+  multiple layers. Reorganize menus so as not to use Script-Fu menus.
+
+2/8/2005: 0.2
+  Look for files in ~/.glabels for additional templates
+  when generating labeltemplates.scm.
+
+  Fix a bug involving iterating from the wrong end of the list.
+
+2/2/2005: 0.1
+  First release.
+

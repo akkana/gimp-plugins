@@ -1,0 +1,71 @@
+GimpLabels
+
+This is a little pair of GIMP scripts which can make it easier to
+design and print labels, business cards and other sized objects in
+GIMP, using label templates from the gLabels program.
+
+Also, us-letter paper size is the only supported paper so far.
+Modifying the code would be straightforward, though.
+
+BUILD/INSTALL OPTIONS
+
+First: the easy way to install if you just want to try out the
+script with the labels provided is to copy labels.scm into your
+gimp scripts directory. For example, on Linux with GIMP 2.4,
+that would be:
+  cp labels.scm ~/.gimp-2.4/scripts/
+
+If you want more control or want to add your own labels, read on:
+
+make will build labels.scm, using whatever label templates are
+currently in this directory.  gimplabels is shipped with a set
+of labels, but if you have a recent version of glabels installed
+you may want to update the list by typing:
+
+make templates will update labeltemplates.scm, copying templates
+from your gLabels setup in /usr/share/glabels/templates.  If your
+glabels is installed anywhere else, you will have to modify the
+make-label-fu.py program.  make-label-fu.py also depends on having
+python and py-xml installed; if you don't have those, you're probably
+best off using the label templates shipped with gimplabels.
+
+make install will install the script to your personal gimp-2.0 or
+gimp-2.2 directory.  It relies on having "gimptool" installed.
+On some distributions, this is packaged separately from gimp,
+in a package called gimp-devel or gimp-dev.  If you can't install
+gimptool, you can simply cp labels.scm to ~/.gimp-2.x/scripts/
+
+HOW TO USE GIMPLABELS
+
+Once installed, the scripts should show up in two places:
+<Toolbox>/Xtns/Script-Fu/Labels/Rect Label...
+    Make a new image with the right aspect ratio for the particular
+    rectangular label.
+
+<Image>/Script-Fu/Labels/Rect Label Page...
+    Make an image of a page of labels, populating it with the
+    current label image.
+
+    Note: the "Printer fudge factor" parameter is to compensate
+    for the fact that gutenprint printer drivers never seem to use
+    quite the whole page. The default is 0.968, which is about right
+    for my Epson C86. I recommend that you print out some test pages
+    (in draft mode on cheap paper) and figure out the right fudge
+    factor for your printer, then edit the script so that will
+    be the default (see the SF-ADJUSTMENT for "Printer fudge factor"
+    near the end of the labels.scm).
+
+<Toolbox>/Xtns/Script-Fu/Labels/CD Label...
+    Make a CD label blank, with the inner part cut out.
+
+<Image>/Script-Fu/Labels/CD Mask
+    Cut out a CD shape from the current image.
+
+AUTHORSHIP AND COPYRIGHT
+
+gimplabels is copyright (C) 2005,2006,2007 by Akkana Peck,
+and is licensed under the GPL: share and enjoy!
+As usual, it's provided with no warranty, etc.
+But if you have questions or enhancements, feel free to
+contact the author: Akkana Peck, akkana@shallowsky.com.
+
