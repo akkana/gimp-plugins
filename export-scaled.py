@@ -236,11 +236,20 @@ def python_export_scaled(img, drawable) :
             # run_mode=RUN_WITH_LAST_VALS is supposed to prevent prompting,
             # but actually seems to do nothing. Copying the -save-options
             # parasites is more effective.
+            dpy = chooser.get_display()
+            chooser.hide()
+            dpy.sync()
             pdb.gimp_file_save(newimg, newimg.active_layer, filename, filename,
                                run_mode=RUN_WITH_LAST_VALS)
-        except :
-            warning_label.set_text("Couldn't save to " + filename)
+        except RuntimeError, e :
+            #warning_label.set_text("Didn't save to " + filename
+            #                       + ":" + str(e))
+            markup = '<span foreground="red" size="larger" weight=\"bold">'
+            markup_end = '</span>'
+            warning_label.set_markup(markup + "Didn't save to " + filename
+                                   + ":" + str(e) + markup_end)
             gimp.delete(newimg)
+            chooser.show()
             continue
 
         chooser.destroy()
