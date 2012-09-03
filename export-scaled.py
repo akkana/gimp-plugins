@@ -103,8 +103,9 @@ def python_export_scaled(img, drawable) :
                                              gtk.STOCK_SAVE,
                                              gtk.RESPONSE_OK))
 
-    chooser.set_current_name(os.path.basename(init_filename))
-    chooser.set_current_folder(os.path.dirname(init_filename))
+    if init_filename :
+        chooser.set_current_name(os.path.basename(init_filename))
+        chooser.set_current_folder(os.path.dirname(init_filename))
 
     vbox = gtk.VBox(spacing=8)
 
