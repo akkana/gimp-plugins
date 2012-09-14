@@ -40,18 +40,23 @@ def entry_changed(entry, which) :
     # Can't use get_value() or get_value_as_int() because they
     # don't work before an update(), but update() will usually
     # overwrite what the user typed. So define a function:
-    def get_int_value(spinbox) :
+    def get_num_value(spinbox) :
         s = spinbox.get_text()
         if not s :
             return 0
+
         try :
-            p = int(float(s))
+            p = int(s)
             return p
-        except :
-            return 0
+        except ValueError :
+            try :
+                p = float(s)
+                return p
+            except ValueError :
+                return 0
 
     if which == 'p' :
-        p = get_int_value(percent_e)
+        p = get_num_value(percent_e)
         if not p : return
         busy = True
         w = int(orig_width * p / 100.)
@@ -61,20 +66,24 @@ def entry_changed(entry, which) :
         busy = False
 
     elif which == 'w' :
-        w = get_int_value(width_e)
+        w = get_num_value(width_e)
         if not w : return
-        p = int(orig_width / w * 100)
+        busy = True
+        p = w * 100. / orig_width
         percent_e.set_text(str(p))
         h = int(orig_height * p / 100.)
         height_e.set_text(str(h))
+        busy = False
 
     elif which == 'h' :
-        h = get_int_value(height_e)
+        h = get_num_value(height_e)
         if not h : return
-        p = int(orig_height / h * 100)
+        busy = True
+        p = h * 100. / orig_height
         percent_e.set_text(str(p))
         w = int(orig_width * p / 100.)
         width_e.set_text(str(w))
+        busy = False
     else :
         print "I'm confused -- not width, height or percentage"
 
@@ -183,7 +192,7 @@ def python_export_scaled(img, drawable) :
             chooser.destroy()
             return
 
-        percent = int(percent_e.get_text())
+        percent = float(percent_e.get_text())
         width = int(width_e.get_text())
         height = int(height_e.get_text())
 
