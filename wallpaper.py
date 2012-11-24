@@ -95,7 +95,20 @@ def python_wallpaper(img, layer) :
     #print img
     #print dir(img)
     #print " "
-    dirpathname = os.path.join(wallpaperdir, str(width))
+    dirpathname = os.path.join(wallpaperdir,
+                               "%dx%d" % (width, height))
+    if not os.path.exists(dirpathname) :
+        fulldirpathname = dirpathname
+        dirpathname = os.path.join(wallpaperdir, str(width))
+        if not os.path.exists(dirpathname) :
+            errdialog = gtk.MessageDialog(None, 0,
+                                          gtk.MESSAGE_ERROR, gtk.BUTTONS_OK,
+                                          "Neither %s nor %s exists" %
+                                           (fulldirpathname, dirpathname))
+            errdialog.show_all()
+            errdialog.run()
+            return
+
     pathname = os.path.join(dirpathname, name)
     #newimg.name = name
     #newimg.filename = pathname
