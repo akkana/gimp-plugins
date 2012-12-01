@@ -81,7 +81,13 @@ def python_wallpaper(img, layer) :
     # hasn't been saved as an XCF, which this image likely hasn't.
     # So test for that:
     if img.name.find('.') < 0 :
-        name = os.path.basename(img.filename)
+        if img.filename :
+            name = os.path.basename(img.filename)
+        else :
+            # If there's neither an image name or a filename --
+            # e.g. it was created as new, or dragged/pasted from a browser --
+            # make up a placeholder and hope the user notices and changes it.
+            name = "wallpaper.jpg"
     else :
         name = img.name
     if name[-4:] == ".xcf" :
@@ -195,7 +201,7 @@ def python_wallpaper(img, layer) :
     if newname != name :
         # Change the image name on the original -- so that if we make
         # backgrounds of any other sizes, the name will stay the same.
-        pdb.gimp_image_set_filename(img, name)
+        pdb.gimp_image_set_filename(img, newname)
         name = newname
     # Set name and dirpath for the new image, in case user choses "Edit"
     pdb.gimp_image_set_filename(newimg, pathname)
@@ -215,6 +221,7 @@ def python_wallpaper(img, layer) :
             # so delete it:
             gimp.delete(newimg)
             gimp.context_pop()
+
             return
         except RuntimeError, e:
             print "Couldn't save!", str(e)
