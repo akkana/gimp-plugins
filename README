@@ -23,6 +23,10 @@ pandora-combine.scm
   you initial fixed spacing and layer masks; then you can drag the images
   around to choose final placement, and edit the layer masks as needed.
 
+stack.scm
+  Make an averaged image stack:
+  combine all the layers with opacity 1/num_images.
+
 sf-helloworld.scm
   A simple script-fu demonstration (used in GIMP scripting talks).
 
