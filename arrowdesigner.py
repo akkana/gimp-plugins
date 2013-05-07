@@ -67,13 +67,12 @@ def python_fu_arrow_from_selection(img, layer, arrowangle, arrowsize,
     # e.g. try arrow size 1, arrow angle < 30.
     if int(l_head) > 1 and  points[2:4] != points[4:6] :
         # Select the arrowhead shape
-        pdb.gimp_free_select(img, 6, points, CHANNEL_OP_REPLACE,
-                             True, False, 0)
+        pdb.gimp_image_select_polygon(img, CHANNEL_OP_REPLACE, 6, points)
         # Fill the arrowhead
         pdb.gimp_edit_fill(layer, FOREGROUND_FILL)
         
     # Restore the old selection
-    pdb.gimp_selection_load(savesel)
+    pdb.gimp_image_select_item(img, CHANNEL_OP_REPLACE, savesel)
 
 def direc_to_coords(x1, y1, x2, y2, direction) :
     if direction == DIREC_N :
