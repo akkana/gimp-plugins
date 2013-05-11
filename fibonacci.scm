@@ -156,7 +156,7 @@
   ))
 
 (script-fu-register "script-fu-fibonacci-grid"
-                     _"<Toolbox>/Xtns/Misc/Fibonacci Grid..."
+                     _"<Image>/File/Create/Misc/Fibonacci Grid..."
                     "Make a Fibonacci grid and spirals"
                     "Akkana Peck"
                     "Akkana Peck"

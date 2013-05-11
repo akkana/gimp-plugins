@@ -340,7 +340,7 @@
          (set! psizes (cdr psizes))
          )
   (script-fu-register "script-fu-rect-label"
-                      _"<Toolbox>/Xtns/Misc/Rect label..."
+                      _"<Image>/File/Create/Misc/Rect label..."
                       "Make a single rectangular template"
                       "Akkana Peck"
                       "Akkana Peck"
@@ -371,7 +371,7 @@
 )
 
 (script-fu-register "script-fu-CD-label"
-		    _"<Toolbox>/Xtns/Misc/CD label..."
+		    _"<Image>/File/Create/Misc/CD label..."
 		    "CD label shape"
 		    "Akkana Peck"
 		    "Akkana Peck"
