@@ -48,6 +48,10 @@ export-scaled.py
   Export a scaled version of the current image, remembering name & scale
   for the next export.
 
+export-all.py
+  Show a dialog offering to export all open images.
+  Currently this is just a skeleton for other people to build on.
+
 life.py
   Conway's Game of Life (more or less, with colors added).
   No, there's no practical use for it. It's just a silly demo.
