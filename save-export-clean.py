@@ -42,7 +42,10 @@ def python_export_clean(img, drawable) :
         img.filename = filename
         chooser.destroy()
 
-    pdb.gimp_file_save(img, drawable, filename, filename)
+    exportimg = pdb.gimp_image_duplicate(img)
+    layer = pdb.gimp_image_merge_visible_layers(exportimg, CLIP_TO_IMAGE)
+    
+    pdb.gimp_file_save(exportimg, layer, filename, filename)
     pdb.gimp_image_clean_all(img)
 
 def choose_likely_save_dir() :
