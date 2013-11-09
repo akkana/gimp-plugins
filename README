@@ -62,6 +62,12 @@ migrate-gimp-presets.py
 pyui.py
   Demonstrate all possible UI options for pygimp registration dialogs.
 
+saver.py
+  Meant to be the One True Save/Export plug-in, on ctrl-S and ctrl-Shift-S.
+  It saves whether the type is XCF or other, it can automatically save
+  a copy in a different format, and it can even scale that copy and
+  remember the scaling.
+
 save-export-clean.py
   Save or export, marking the current image clean.
   For people who dislike the Save vs. Export split introduced in 2.8.
