@@ -54,54 +54,96 @@ warning_label = None
 # A way to turn off notifications while we're calculating
 busy = False
 
-def save_it(img, drawable, filename, copyname, width, height):
-    '''Do the actual saving, scaling and copy saving.
+def save_both(img, drawable, filename, copyname, width, height):
+    '''Save the image, and also save the copy if appropriate,
+       doing any duplicating or scaling that might be necessary.
        Returns None on success, else a nonempty string error message.
     '''
-
-    print "Saving original", filename,
+    msg = "Saving  " + filename
     if copyname:
-        print "and a copy,", copyname
-    else:
-        print "with no copy"
+        if width and height:
+            msg += " and a scaled copy, " + copyname
+        else:
+            msg += " and a copy, " + copyname
+    print msg
+    pdb.gimp_message(msg)
 
     # Is there any point to pushing and popping the context?
     #gimp.context_pop()
 
-    # First, save the original image.
-    pdb.gimp_file_save(img, drawable, filename, filename)
+    # Set up the parasite with information about the copied image,
+    # so it will be saved with the main XCF image.
+    if copyname:
+        if (width and height):
+            percent = width * 100.0 / img.width
+            # XXX note that this does not guard against changed aspect ratios.
+            parastring = '%s\n%d\n%d\n%d' % (copyname, percent, width, height)
+        else:
+            parastring = '%s\n100.0\nNone\nNone' % (copyname)
 
-    # That's the important part, so mark the image clean.
+        print "Saving parasite", parastring
+        para = img.attach_new_parasite('export-copy', 0, parastring)
+
+        # Also make sure that copyname is a full path (if filename is).
+        copypath = os.path.split(copyname)
+        if not copypath[0] or len(copypath) == 1:
+            filepath = os.path.split(filename)
+            if len(filepath) > 1 and filepath[0]:
+                print "Turning", copyname, "into a full path:",
+                copyname = os.path.join(filepath[0], copyname)
+                print copyname
+
+    # Now the parasite is safely attached, and we can save.
+    # Alas, we can't attach the JPEG settings parasite until after
+    # we've saved the copy, so that won't get saved with the main image
+    # though it will be attached to the image and remembered in
+    # this session, and the next time we save it should be remembered.
+
+    def is_xcf(thefilename):
+        base, ext = os.path.splitext(thefilename)
+        ext = ext.lower()
+        if ext == '.gz' or ext == '.bz2':
+            base, ext = os.path.splitext(base)
+            ext = ext.lower()
+        return (ext == '.xcf')
+
+    # First, save the original image.
+    if is_xcf(filename) or len(img.layers) < 2:
+        pdb.gimp_file_save(img, drawable, filename, filename)
+    else:
+        # It's not XCF and it has multiple layers.
+        # We need to make a new image and flatten it.
+        print "Flattening image"
+        copyimg = pdb.gimp_image_duplicate(img)
+        copyimg.flatten()
+        pdb.gimp_file_save(copyimg, copyimg.active_layer, filename, filename)
+        gimp.delete(copyimg)
+
+    # We've done the important part, so mark the image clean.
     pdb.gimp_image_clean_all(img)
     img.filename = filename
 
-    # If we don't have to save a copy, then just return.
+    # If we don't have to save a copy, return.
     if not copyname:
         return None
 
-    newimg = pdb.gimp_image_duplicate(img)
-
-    # If it's XCF, we don't need to flatten or process it further,
-    # just scale it:
-    base, ext = os.path.splitext(filename)
-    ext = ext.lower()
-    if ext == '.gz' or ext == '.bz2':
-        base, ext = os.path.splitext(base)
-        ext = ext.lower()
-    if ext != '.xcf':
-        newimg.flatten()
-        # XXX This could probably be smarter about flattening. Oh, well.
-
-    # Are we scaling?
-    if width and height:
-        newimg.scale(width, height)
-        percent = img.width / width * 100.0
-        # XXX note that this does not guard against changed aspect ratios.
-        parastring = '%s\n%d\n%d\n%d' % (copyname, percent, width, height)
+    # We'll need a new image if the copy is non-xcf and we have more
+    # than one layer, or if we're scaling.
+    if (width and height):
+        # We're scaling!
+        copyimg = pdb.gimp_image_duplicate(img)
+        copyimg.scale(width, height)
         print "Scaling to", width, 'x', height
+        print "Set parastring to", parastring, "(end of parastring)"
+
+    elif len(img.layers) > 1 and not is_xcf(copyname):
+        # We're not scaling, but we still need to flatten.
+        copyimg = pdb.gimp_image_duplicate(img)
+        copyimg.flatten()
+        print "Flattening but not scaling"
     else:
-        parastring = '%s\n100.0\nNone\nNone' % (copyname)
-        print "Not scaling"
+        copyimg = img
+        print "Not scaling or flattening"
 
     # gimp-file-save insists on being passed a valid layer,
     # even if saving to a multilayer format such as XCF. Go figure.
@@ -113,10 +155,11 @@ def save_it(img, drawable, filename, copyname, width, height):
     # but actually seems to do nothing. Copying the -save-options
     # parasites is more effective.
     try:
-        pdb.gimp_file_save(newimg, newimg.active_layer, copyname, copyname,
+        pdb.gimp_file_save(copyimg, copyimg.active_layer, copyname, copyname,
                            run_mode=RUN_WITH_LAST_VALS)
     except RuntimeError, e:
-        gimp.delete(newimg)
+        gimp.delete(copyimg)
+        print "Runtime error -- didn't save"
         return "Runtime error -- didn't save"
 
     # Find any image type settings parasites (e.g. jpeg settings)
@@ -130,19 +173,28 @@ def save_it(img, drawable, filename, copyname, width, height):
                     toimg.attach_new_parasite(pname, para.flags, para.data)
 
     # Copy any settings parasites we may have saved from previous runs:
-    copy_settings_parasites(newimg, img)
+    copy_settings_parasites(copyimg, img)
 
-    # Save parameters as a parasite, even if saving failed,
-    # so we can default to them next time.
-    # Save: percent, width, height
-    # I have no idea what the flags are -- the doc doesn't say.
-    print "Saving parasite", parastring
-    para = img.attach_new_parasite('export-scaled', 0, parastring)
-    # img.parasite_attach(para)
-
-    gimp.delete(newimg)
-    #gimp.Display(newimg)
+    gimp.delete(copyimg)
+    #gimp.Display(copyimg)
     return None
+
+def init_from_parasite(img):
+    '''Returns copyname, percent, width, height.'''
+    para = img.parasite_find('export-copy')
+    if para:
+        #copyname, percent, width, height = \
+        paravals = \
+            map(lambda x: 0 if x == 'None' or x == '' else x,
+                para.data.split('\n'))
+        copyname = paravals[0]
+        percent = float(paravals[1])
+        width = int(paravals[2])
+        height = int(paravals[3])
+        print "Read parasite values", copyname, percent, width, height
+        return copyname, percent, width, height
+    else:
+        return None, 100.0, img.width, img.height
 
 def python_saver(img, drawable):
     # Figure out whether this image already has filenames chosen;
@@ -150,37 +202,17 @@ def python_saver(img, drawable):
     # if not, call python_saver_as(img, drawable).
 
     # Figure out whether there's an export parasite
-    # so we can pass width and height to save_it.
+    # so we can pass width and height to save_both.
     copyname, export_percent, export_width, export_height = \
         init_from_parasite(img)
 
-    if copyname:
-        if img.filename and img.filename != copyname:
-            print "Using current filename of", img.filename, \
-                "instead of parasite filename of", copyname
-        elif not img.filename:
-            print "Strange, image has export filename", copyname, \
-                "but no img.filename"
-
     if img.filename:
-        save_it(img, drawable, img.filename, copyname,
+        save_both(img, drawable, img.filename, copyname,
                 export_width, export_height)
     else:
         # If we don't have a filename, either from the current session
         # or saved as a parasite, then we'd better prompt for one.
         python_saver_as(img, drawable)
-
-def init_from_parasite(img):
-    '''Returns copyname, percent, width, height.'''
-    para = img.parasite_find('export-scaled')
-    if para:
-        copyname, percent, width, height = \
-            map(lambda x: 0 if x == 'None' or x == '' else x,
-                para.data.split('\n'))
-        print "Read parasite values", copyname, percent, width, height
-        return copyname, percent, width, height
-    else:
-        return None, 100.0, img.width, img.height
 
 def python_saver_as(img, drawable):
     global percent_e, width_e, height_e, orig_width, orig_height, warning_label
@@ -227,10 +259,9 @@ def python_saver_as(img, drawable):
     copybox.attach(l, 1, 2, 1, 2,
                    xpadding=5, ypadding=5)
 
-    adj = gtk.Adjustment(float(export_percent), 1, 10000, 1, 10, 0)
-    percent_e = gtk.SpinButton(adj)   #, 0, 0)
+    adj = gtk.Adjustment(int(export_percent), 1, 10000, 1, 10, 0)
+    percent_e = gtk.SpinButton(adj, 0, 0)
     percent_e.connect("changed", entry_changed, 'p');
-
     copybox.attach(percent_e, 2, 3, 1, 2,
                    xpadding=5, ypadding=5)
 
@@ -239,8 +270,8 @@ def python_saver_as(img, drawable):
     copybox.attach(l, 3, 4, 1, 2,
                    xpadding=5, ypadding=5)
 
-    adj = gtk.Adjustment(float(export_width), 1, 10000, 1, 10, 0)
-    width_e = gtk.SpinButton(adj)
+    adj = gtk.Adjustment(int(export_width), 1, 10000, 1, 10, 0)
+    width_e = gtk.SpinButton(adj, 0, 0)
     width_e.connect("changed", entry_changed, 'w');
     copybox.attach(width_e, 4, 5, 1, 2,
                    xpadding=5, ypadding=5)
@@ -250,8 +281,8 @@ def python_saver_as(img, drawable):
     copybox.attach(l, 5, 6, 1, 2,
                    xpadding=5, ypadding=5)
 
-    adj = gtk.Adjustment(float(export_width), 1, 10000, 1, 10, 0)
-    height_e = gtk.SpinButton(adj)
+    adj = gtk.Adjustment(int(export_height), 1, 10000, 1, 10, 0)
+    height_e = gtk.SpinButton(adj, 0, 0)
     height_e.connect("changed", entry_changed, 'h');
     copybox.attach(height_e, 6, 7, 1, 2,
                    xpadding=5, ypadding=5)
@@ -301,7 +332,7 @@ def python_saver_as(img, drawable):
         chooser.hide()
         dpy.sync()
 
-        err = save_it(img, drawable, filename, copyname, width, height)
+        err = save_both(img, drawable, filename, copyname, width, height)
         if err:
             markup = '<span foreground="red" size="larger" weight=\"bold">'
             markup_end = '</span>'
@@ -311,7 +342,7 @@ def python_saver_as(img, drawable):
             chooser.show()
             continue
 
-        # Otherwise, save_it was happy so we can continue.
+        # Otherwise, save_both was happy so we can continue.
         chooser.destroy()
 
         #gimp.context_pop()
