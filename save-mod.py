@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Copyright 2013 by Michael Schönitzer, Akkana Peck
 # You may use and distribute this plug-in under the terms of the GPL v2
