@@ -7,9 +7,8 @@
 #ToDo:
 #- 'progressbar'
 #- Success-Dialog
+#- suggest filename
 #- remember Usr/Pw
-#- Lisence-Chooser
-#- Cat
 #- i18n
 
 from gimpfu import *
@@ -17,6 +16,7 @@ import gtk
 import os
 import collections
 import wikitools
+import tempfile
 
 DEFAULT_WIKITEXT = '''{{Information 
 |Description={{en|}}
@@ -27,10 +27,7 @@ DEFAULT_WIKITEXT = '''{{Information
 |Permission=
 |other_versions=
 }}
-
-{{PD-old-100}}
-
-[[Category:]]'''
+'''
 WIKI_URL = "https://commons.wikimedia.org/w/api.php"
 
 class MyWindow(gtk.Dialog):
@@ -68,7 +65,25 @@ class MyWindow(gtk.Dialog):
         self.textview.set_wrap_mode(gtk.WRAP_WORD_CHAR)
         self.textbuffer.set_text(DEFAULT_WIKITEXT)
         box.add(self.textview)
-
+        
+        
+        self.license = gtk.combo_box_new_text()
+        self.license.append_text("{{self|GFDL|cc-by-sa-all|migration=redundant}}")
+        self.license.append_text("{{self|cc-by-sa-3.0}}")
+        self.license.append_text("{{self|Cc-zero}}")
+        self.license.append_text("{{cc-by-sa-3.0}}")
+        self.license.append_text("{{PD-old-100}}")
+        self.license.append_text("{{PD-old-70}}")
+        self.license.append_text("{{PD-Art}}")
+        box.add(self.license)
+        
+        self.cat_box = gtk.HBox()
+        self.cat_label = gtk.Label("Categories:\t")
+        self.category_entry = gtk.Entry()
+        self.cat_box.add(self.cat_label)
+        self.cat_box.add(self.category_entry)
+        box.add(self.cat_box)
+        
         self.show_all()
 
 
@@ -78,7 +93,7 @@ def python_savemod_clean(img, drawable) :
     if pdb.gimp_image_is_dirty(img) or not img.filename:
       ### save file in temporary file ###
       use_tempfile=True
-      file = tempfile.mkstemp(prefix='gimp_upload2commons')
+      file = tempfile.mkstemp(prefix='gimp_upload2commons-', suffix=".jpg")
       local_file_name = file[1]
       fd = file[0]
       exportimg = pdb.gimp_image_duplicate(img)
@@ -101,10 +116,15 @@ def python_savemod_clean(img, drawable) :
        return
     
     remote_file_name = dialog.filename_entry.get_text()
-    wikitext = dialog.textbuffer.get_text(dialog.textbuffer.get_bounds()[0], dialog.textbuffer.get_bounds()[1])
+    wikitext = dialog.textbuffer.get_text(dialog.textbuffer.get_bounds()[0],
+    									  dialog.textbuffer.get_bounds()[1])
+    wikitext += "\n" + dialog.license.get_active_text() + "\n"
+    for cat in dialog.category_entry.get_text().split('|'):
+      wikitext += "\n[[Category:" + cat + "]]"
     comment = wikitext
     
     print(wikitext)
+    return
 
     ### Upload ###
     try:
