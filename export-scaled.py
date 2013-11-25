@@ -13,7 +13,6 @@
 from gimpfu import *
 import gtk
 import os
-import collections
 
 # Image original size
 orig_width = 0
