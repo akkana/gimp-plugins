@@ -66,7 +66,12 @@ def save_both(img, drawable, filename, copyname, width, height):
         else:
             msg += " and a copy, " + copyname
     print msg
-    pdb.gimp_message(msg)
+    # Don't use gimp_message -- it can pop up a dialog.
+    # pdb.gimp_message_set_handler(MESSAGE_BOX)
+    # pdb.gimp_message(msg)
+    # Alternately, could use gimp_progress, though that's not ideal.
+    # If you use gimp_progress, don't forget to call pdb.gimp_progress_end()
+    #pdb.gimp_progress_set_text(msg)
 
     # Is there any point to pushing and popping the context?
     #gimp.context_pop()
@@ -196,10 +201,10 @@ def init_from_parasite(img):
     else:
         return None, 100.0, img.width, img.height
 
-def python_saver(img, drawable):
+def python_fu_saver(img, drawable):
     # Figure out whether this image already has filenames chosen;
     # if so, just save and export;
-    # if not, call python_saver_as(img, drawable).
+    # if not, call python_fu_saver_as(img, drawable).
 
     # Figure out whether there's an export parasite
     # so we can pass width and height to save_both.
@@ -212,9 +217,9 @@ def python_saver(img, drawable):
     else:
         # If we don't have a filename, either from the current session
         # or saved as a parasite, then we'd better prompt for one.
-        python_saver_as(img, drawable)
+        python_fu_saver_as(img, drawable)
 
-def python_saver_as(img, drawable):
+def python_fu_saver_as(img, drawable):
     global percent_e, width_e, height_e, orig_width, orig_height, warning_label
     orig_filename = img.filename
 
@@ -420,7 +425,7 @@ register(
         (PF_DRAWABLE, "drawable", "Input drawable", None),
     ],
     [],
-    python_saver,
+    python_fu_saver,
     menu = "<Image>/File/Save/"
 )
 
@@ -438,7 +443,7 @@ register(
         (PF_DRAWABLE, "drawable", "Input drawable", None),
     ],
     [],
-    python_saver_as,
+    python_fu_saver_as,
     menu = "<Image>/File/Save/"
 )
 
