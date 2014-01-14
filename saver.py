@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-#!/usr/bin/env python
-
 # This is a plug-in intended to be bound to Ctrl-S, and to act as
 # a combination of Save, Save as..., Overwrite, and Export...
 #
