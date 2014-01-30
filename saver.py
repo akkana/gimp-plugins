@@ -36,6 +36,7 @@
 from gimpfu import *
 import gtk
 import os
+import collections
 
 # Image original size
 orig_width = 0
@@ -235,9 +236,25 @@ def python_fu_saver_as(img, drawable):
                                              gtk.STOCK_SAVE,
                                              gtk.RESPONSE_OK))
 
+    # Set a current folder, since otherwise it'll be empty
+    # and will nag the user to set one.
     if img.filename:
         chooser.set_current_name(os.path.basename(img.filename))
         chooser.set_current_folder(os.path.dirname(img.filename))
+    else:
+        # No directory set yet. So pick a likely directory
+        # that's used by a lot of images currently open.
+        counts = collections.Counter()
+        for img in gimp.image_list() :
+            if img.filename :
+                counts[os.path.dirname(img.filename)] += 1
+        try :
+            common = counts.most_common(1)[0][0]
+            chooser.set_current_folder(common)
+        except :
+            # GIMP has no images open with pathnames associated.
+            # So we can't guess at a directory; just leave it blank.
+            pass
 
     copybox = gtk.Table(rows=3, columns=7)
 
