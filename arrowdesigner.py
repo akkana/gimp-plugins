@@ -144,7 +144,7 @@ class ArrowWindow(gtk.Window):
         label.set_alignment(xalign=0.0, yalign=1.0)
         table.attach(label, 0, 1, 0, 1, xoptions=gtk.FILL, yoptions=0)
         label.show()
-        adj = gtk.Adjustment(self.arrowsize, 1, 200, 1)
+        adj = gtk.Adjustment(self.arrowsize, 1, 400, 1)
         adj.connect("value_changed", self.arrowsize_cb)
         scale = gtk.HScale(adj)
         scale.set_digits(0)
@@ -224,7 +224,7 @@ class ArrowWindow(gtk.Window):
         btn.show()
         
         btn = gtk.Button("Close")
-        btn.connect("clicked", gtk.main_quit)
+        btn.connect("clicked", self.close_window)
         hbox.add(btn)
         btn.show()
 
@@ -236,6 +236,14 @@ class ArrowWindow(gtk.Window):
         timeout_add(300, self.update, self)    
 
         return win
+
+    def close_window(self, widget) :
+        # Autocrop our new layer before closing.
+        # autocrop_layer crops the current layer using the layer
+        # passed in as its crop template -- not clear from the doc.
+        self.img.active_layer = self.layer
+        pdb.plug_in_autocrop_layer(self.img, self.layer)
+        gtk.main_quit()
 
     def direction_cb(self, widget, data=None) :
         self.direction = data
