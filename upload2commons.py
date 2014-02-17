@@ -7,7 +7,6 @@
 #ToDo:
 #- 'progressbar'
 #- Success-Dialog
-#- suggest filename
 #- remember Usr/Pw
 #- i18n
 
@@ -17,6 +16,7 @@ import os
 import collections
 import wikitools
 import tempfile
+import time
 
 DEFAULT_WIKITEXT = '''{{Information 
 |Description={{en|}}
@@ -32,10 +32,12 @@ WIKI_URL = "https://commons.wikimedia.org/w/api.php"
 
 class MyWindow(gtk.Dialog):
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, filename="Filename.jpg"):
         gtk.Dialog.__init__(self, "Upload2Commons", parent, 0,
             (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
              gtk.STOCK_OK, gtk.RESPONSE_OK))
+        if not filename:
+          filename="Filename.jpg"
         
         table = gtk.Table(2,2, True)
         
@@ -57,7 +59,7 @@ class MyWindow(gtk.Dialog):
         table.attach(self.pw_entry, 1,2,1,2)
         
         self.filename_entry = gtk.Entry()
-        self.filename_entry.set_text("Filename")
+        self.filename_entry.set_text(filename)
         box.add(self.filename_entry)
         
         self.textview = gtk.TextView()
@@ -87,7 +89,7 @@ class MyWindow(gtk.Dialog):
         self.show_all()
 
 
-def python_savemod_clean(img, drawable) :
+def python_upload2commons(img, drawable) :
     use_tempfile=False
     
     if pdb.gimp_image_is_dirty(img) or not img.filename:
@@ -103,7 +105,7 @@ def python_savemod_clean(img, drawable) :
       local_file_name = img.filename
     
     ### Open Dialog ###
-    dialog = MyWindow()
+    dialog = MyWindow(filename=os.path.basename(img.filename))
     response = dialog.run()
     if response != gtk.RESPONSE_OK:
        return
@@ -121,10 +123,10 @@ def python_savemod_clean(img, drawable) :
     wikitext += "\n" + dialog.license.get_active_text() + "\n"
     for cat in dialog.category_entry.get_text().split('|'):
       wikitext += "\n[[Category:" + cat + "]]"
-    comment = wikitext
+    comment = "File uploaded from Gimp by upload2commons"
     
     print(wikitext)
-    return
+    #return		## For debugging!
 
     ### Upload ###
     try:
@@ -135,6 +137,7 @@ def python_savemod_clean(img, drawable) :
     try:
 	    wiki.login(username=wiki_username,password=wiki_password)
     except:
+        # TODO: GUI
     	print "Invalid Username or Password"
 
     image=open(local_file_name,"r")
@@ -143,9 +146,8 @@ def python_savemod_clean(img, drawable) :
     picture.upload(fileobj=image, comment=comment, ignorewarnings=True)
     print("Finished Uploading")
     
-    # not needed – but maybe used in future versions?
-    #page_name = "File:" + remote_file_name.replace(" ","_")
-    #page = wikitools.Page(wiki, page_name, followRedir=True, watch=True)
+    page_name = "File:" + remote_file_name.replace(" ","_")
+    page = wikitools.Page(wiki, page_name, followRedir=True, watch=True)
     #page.edit(text=wikitext)
     
     if use_tempfile:
@@ -168,7 +170,7 @@ register(
             (PF_DRAWABLE, "drawable", "Input drawable", None),
         ],
         [],
-        python_savemod_clean,
+        python_upload2commons,
         menu = "<Image>/File/Save/"
 )
 
