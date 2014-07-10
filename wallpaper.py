@@ -130,6 +130,14 @@ def python_wallpaper(img, layer) :
 
     newimg.scale(width, height)
 
+    # Copy EXIF information from the old image to the new one.
+    # This uses an API that's new in GIMP 2.9, so it won't happen
+    # in GIMP 2.8 and earlier.
+    if "gimp_image_get_metadata" in dir(pdb):
+        metadata = pdb.gimp_image_get_metadata(img)
+        pdb.gimp_image_set_metadata(newimg, metadata)
+    else:
+
     # Check to make sure we won't be overwriting
     def check_overwrite_cb(widget) :
         newpath = os.path.join(pathentry.get_text(), fileentry.get_text())
