@@ -137,6 +137,7 @@ def python_wallpaper(img, layer) :
         metadata = pdb.gimp_image_get_metadata(img)
         pdb.gimp_image_set_metadata(newimg, metadata)
     else:
+        print "Not copying EXIF metadata -- don't have the API."
 
     # Check to make sure we won't be overwriting
     def check_overwrite_cb(widget) :
