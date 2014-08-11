@@ -119,7 +119,9 @@ def save_both(img, drawable, filename, copyname, width, height):
         # We need to make a new image and flatten it.
         print "Flattening image"
         copyimg = pdb.gimp_image_duplicate(img)
-        copyimg.flatten()
+        # Don't actually flatten since that will prevent saving transparent png.
+        #copyimg.flatten()
+        pdb.gimp_image_merge_visible_layers(copyimg, CLIP_TO_IMAGE)
         pdb.gimp_file_save(copyimg, copyimg.active_layer, filename, filename)
         gimp.delete(copyimg)
 
