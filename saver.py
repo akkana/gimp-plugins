@@ -29,7 +29,7 @@
 
 # This plug-in is hosted at http://github.com/akkana/gimp-plugins/saver.py
 
-# Copyright 2013 by Akkana Peck, http://www.shallowsky.com/software/
+# Copyright 2013,2014 by Akkana Peck, http://www.shallowsky.com/software/
 # You may use and distribute this plug-in under the terms of the GPL v2
 # or, at your option, any later GPL version.
 
@@ -58,7 +58,7 @@ def save_both(img, drawable, filename, copyname, width, height):
        doing any duplicating or scaling that might be necessary.
        Returns None on success, else a nonempty string error message.
     '''
-    msg = "Saving  " + filename
+    msg = "Saving " + filename
     if copyname:
         if width and height:
             msg += " and a scaled copy, " + copyname
@@ -117,7 +117,7 @@ def save_both(img, drawable, filename, copyname, width, height):
     else:
         # It's not XCF and it has multiple layers.
         # We need to make a new image and flatten it.
-        print "Flattening image"
+        print "Merging visible layers"
         copyimg = pdb.gimp_image_duplicate(img)
         # Don't actually flatten since that will prevent saving transparent png.
         #copyimg.flatten()
@@ -126,8 +126,8 @@ def save_both(img, drawable, filename, copyname, width, height):
         gimp.delete(copyimg)
 
     # We've done the important part, so mark the image clean.
-    pdb.gimp_image_clean_all(img)
     img.filename = filename
+    pdb.gimp_image_clean_all(img)
 
     # If we don't have to save a copy, return.
     if not copyname:
@@ -145,7 +145,8 @@ def save_both(img, drawable, filename, copyname, width, height):
     elif len(img.layers) > 1 and not is_xcf(copyname):
         # We're not scaling, but we still need to flatten.
         copyimg = pdb.gimp_image_duplicate(img)
-        copyimg.flatten()
+        # copyimg.flatten()
+        pdb.gimp_image_merge_visible_layers(copyimg, CLIP_TO_IMAGE)
         print "Flattening but not scaling"
     else:
         copyimg = img
@@ -247,9 +248,9 @@ def python_fu_saver_as(img, drawable):
         # No directory set yet. So pick a likely directory
         # that's used by a lot of images currently open.
         counts = collections.Counter()
-        for img in gimp.image_list() :
-            if img.filename :
-                counts[os.path.dirname(img.filename)] += 1
+        for i in gimp.image_list() :
+            if i.filename :
+                counts[os.path.dirname(i.filename)] += 1
         try :
             common = counts.most_common(1)[0][0]
             chooser.set_current_folder(common)
@@ -343,7 +344,6 @@ def python_fu_saver_as(img, drawable):
 
         filename = chooser.get_filename()
         copyname = copyname_e.get_text()
-        print "filename:", filename, "copyname:", copyname
 
         if copyname == orig_filename:
             warning_label.set_text("Change the name or the directory -- don't overwrite original file!")
@@ -361,8 +361,11 @@ def python_fu_saver_as(img, drawable):
             warning_label.set_markup(markup + "Didn't save to " + filename
                                      + ":" + str(e) + markup_end)
             warning_label.set_text(err)
+            print "Error:", err
             chooser.show()
             continue
+        else:
+            pdb.gimp_image_clean_all(img)
 
         # Otherwise, save_both was happy so we can continue.
         chooser.destroy()
@@ -434,7 +437,7 @@ register(
     "Save or export the current image, optionally also exporting a scaled version, prompting for filename only if needed.",
     "Akkana Peck",
     "Akkana Peck",
-    "2013",
+    "2014",
     "Saver",
     "*",
     [
@@ -452,7 +455,7 @@ register(
     "Prompt to save or export the current image, optionally also exporting a scaled version.",
     "Akkana Peck",
     "Akkana Peck",
-    "2013",
+    "2014",
     "Saver as...",
     "*",
     [
