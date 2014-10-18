@@ -9,6 +9,7 @@ from gimpfu import *
 import gtk
 import os
 import collections
+import re
 
 def python_savemod_clean(img, drawable) :
     filename = img.filename
@@ -41,10 +42,16 @@ def python_savemod_clean(img, drawable) :
         
         filenamewoext = os.path.splitext(filename)[0] # filename without extension
         filenameext = os.path.splitext(filename)[1] # filenameextension
-        if filenamewoext[-4:] != "-mod":
+        # ToDo: Improve, so that mor than 9 versions are possible
+        # Add -mod-attachement to filename
+        if not re.search('-mod[0-9]?$' , filenamewoext):
            filename = filenamewoext + "-mod" + filenameext
-        else:
+        elif re.search('-mod$' , filenamewoext):
            filename = filenamewoext + "2" + filenameext
+        # Increment number of the -mod-attachement
+        else:
+           num = int(filenamewoext[-1]) + 1
+           filename = filenamewoext[0:-1] + str(num) + filenameext
     
     # We want to save all layers,
     # so first duplicate the picture, then merge all layers
