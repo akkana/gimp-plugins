@@ -59,6 +59,7 @@ def save_both(img, drawable, filename, copyname, width, height):
        Returns None on success, else a nonempty string error message.
     '''
     msg = "Saving " + filename
+
     if copyname:
         if width and height:
             msg += " and a scaled copy, " + copyname
@@ -117,7 +118,6 @@ def save_both(img, drawable, filename, copyname, width, height):
     else:
         # It's not XCF and it has multiple layers.
         # We need to make a new image and flatten it.
-        print "Merging visible layers"
         copyimg = pdb.gimp_image_duplicate(img)
         # Don't actually flatten since that will prevent saving transparent png.
         #copyimg.flatten()
