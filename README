@@ -17,7 +17,8 @@ saver.py
 
 save-export-clean.py
   Save or export, marking the current image clean.
-  For people who dislike the Save vs. Export split introduced in 2.8.
+  This was an initial quick hack for people who dislike the Save vs. Export
+  split introduced in GIMP 2.8; it's mostly obsoleted now by Saver.
 
 ===============
 OTHER PYTHON PLUG-INS:
