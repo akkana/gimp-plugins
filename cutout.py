@@ -33,18 +33,14 @@ def python_fu_cutout(img, drawable):
     img.undo_group_start()
 
     if orient == 'h':
-        #pdb.gimp_rect_select(img, 0, y2, img.width, img.height,
-        #                     CHANNEL_OP_REPLACE, False, 0)
         pdb.gimp_image_select_rectangle(img, CHANNEL_OP_REPLACE,
                                         0, y2, img.width, img.height)
         pdb.gimp_edit_cut(drawable)
-        #pdb.gimp_selection_none(img)
-        #pdb.gimp_rect_select(img, 0, y1, img.width, img.height - y2,
-        #                     CHANNEL_OP_REPLACE, False, 0)
+
         pdb.gimp_image_select_rectangle(img, CHANNEL_OP_REPLACE,
                                         0, y1, img.width, img.height - y2)
         flayer = pdb.gimp_edit_paste(drawable, True)
-        #pdb.gimp_layer_translate(flayer, 0, y2)
+
         pdb.gimp_floating_sel_anchor(flayer)
         pdb.gimp_image_resize(img, img.width, y1 + img.height - y2, 0, 0)
         pdb.gimp_selection_none(img)
