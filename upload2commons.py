@@ -86,7 +86,15 @@ class MyWindow(gtk.Dialog):
         self.cat_box.add(self.category_entry)
         box.add(self.cat_box)
         
+        self.feedbackbox = gtk.HBox()
+        box.add(self.feedbackbox)
+        self.spinner = gtk.Spinner()
+        
         self.show_all()
+    
+    def startspinner(self):
+        self.feedbackbox.add(self.spinner)
+        self.spinner.start()
 
 
 def python_upload2commons(img, drawable) :
@@ -110,6 +118,7 @@ def python_upload2commons(img, drawable) :
     if response != gtk.RESPONSE_OK:
        return
 
+    dialog.startspinner()
     wiki_username = dialog.usr_entry.get_text()
     wiki_password = dialog.pw_entry.get_text()
     
@@ -140,10 +149,13 @@ def python_upload2commons(img, drawable) :
         # TODO: GUI
     	print "Invalid Username or Password"
 
+    exit
+    
     image=open(local_file_name,"r")
     picture=wikitools.wikifile.File(wiki=wiki, title=remote_file_name)
     print("Uploading…")
-    picture.upload(fileobj=image, comment=comment, ignorewarnings=True)
+    #picture.upload(fileobj=image, comment=comment, ignorewarnings=True)
+    time.sleep(6)
     print("Finished Uploading")
     
     page_name = "File:" + remote_file_name.replace(" ","_")
