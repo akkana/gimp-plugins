@@ -87,7 +87,8 @@ def save_both(img, drawable, filename, copyname, width, height):
             parastring = '%s\n100.0\nNone\nNone' % (copyname)
 
         print "Saving parasite", parastring
-        para = img.attach_new_parasite('export-copy', 0, parastring)
+        para = img.attach_new_parasite('export-copy', 1, parastring)
+        # The second argument is is_persistent
 
         # Also make sure that copyname is a full path (if filename is).
         copypath = os.path.split(copyname)
