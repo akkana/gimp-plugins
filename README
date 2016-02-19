@@ -34,6 +34,9 @@ arrowdesigner.py
 blobi.py
   Text effect similar to bevel and drop shadow, but different.
 
+changefont.py
+  Change font face and size for all text layers in the current image.
+
 export-scaled.py
   Export a scaled version of the current image, remembering name & scale
   for the next export.
