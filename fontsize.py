@@ -8,8 +8,9 @@ def python_change_font_size(img, fontsize) :
     for l in img.layers:
         if not pdb.gimp_item_is_text_layer(l):
             continue
-        # pdb.gimp_text_layer_set_font(l, font)
 	pdb.gimp_text_layer_set_font_size(l, fontsize, 0)
+        # You can also change font face, like this:
+        # pdb.gimp_text_layer_set_font(l, font)
 
     pdb.gimp_image_undo_group_end(img)
 
