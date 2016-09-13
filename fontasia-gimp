@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
-# fontasia v. 0.5:
+# fontasia 0.6:
 # List all fonts on the system and let the user group them into categories.
 # This is the GIMP plug-in version.
 
 #
-# Contributors: Akkana Peck, Mikael Magnusson
+# Contributors: Akkana Peck, Mikael Magnusson, Michael Schumacher
 #
 # More info on fontasia: http://shallowsky.com/software/fontasia
 
@@ -425,8 +425,15 @@ class FontApp(gtk.Window):
     # Lines in the category file look like:
     # catname: font, font, font ...
     #
-    def read_category_file(self):
-        self.cat_file_name = os.path.join(os.getenv("HOME"), ".fontasia")
+    def read_category_file(self) :
+        try:
+            from win32com.shell import shellcon, shell
+            homedir = shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
+        except ImportError:
+            homedir = os.getenv("HOME")
+
+        self.cat_file_name = os.path.join(homedir, ".fontasia")
+
         filename = self.cat_file_name
         if not os.access(filename, os.R_OK):
             filename = "/etc/xdg/fontasia/defaults"
@@ -571,7 +578,6 @@ class FontApp(gtk.Window):
 
     #
     # Callback for the main toggle buttons down the right half of the window.
-    # Toggle whether XXX
     #
     #def category_toggle(self, widget, catname):
     #    self.update_font_list()
