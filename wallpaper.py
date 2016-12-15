@@ -123,7 +123,18 @@ def python_wallpaper(img, layer) :
 
     if not pdb.gimp_edit_copy_visible(img) :
         return
-    newimg = pdb.gimp_edit_paste_as_new()
+
+    # pdb.gimp_edit_paste_as_new() is deprecated,
+    # but pdb.gimp_edit_paste_as_new_image() isn't available until 2.9.
+    # isn't available in GIMP 2.8.
+    version = map(int, pdb.gimp_version().split('.'))
+    print version
+    if version[0] > 2 or version[0] == 2 and version[1] > 8:
+        print "New version"
+        newimg = pdb.gimp_edit_paste_as_new_image()
+    else:
+        print "Old version"
+        newimg = pdb.gimp_edit_paste_as_new()
 
     # Paste-as-new creates an image with transparency,
     # which will warn if you try to save as jpeg, so:
