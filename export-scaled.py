@@ -220,6 +220,7 @@ def python_export_scaled(img, drawable) :
         if ext != '.xcf' :
             newimg.flatten()
             # XXX This could probably be smarter about flattening. Oh, well.
+            pdb.gimp_image_merge_visible_layers(copyimg, CLIP_TO_IMAGE)
 
         newimg.scale(width, height)
 
