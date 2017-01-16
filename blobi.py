@@ -4,7 +4,7 @@ from gimpfu import *
 
 def python_blobify(img, layer, blur) :
     pdb.gimp_undo_push_group_start(img)
-
+    # Just a git test
     # Do stuff here
     pdb.gimp_selection_layer_alpha(layer)
     pdb.gimp_selection_invert(img)
