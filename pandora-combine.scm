@@ -98,10 +98,10 @@
      )
 
      (script-fu-menu-register "script-fu-pandora-combine"
-                              _"<Image>/Filters/Combine")
+                              _"<Image>/Filters/Pandora")
      ) ; end begin
      (script-fu-register "script-fu-pandora-combine"
-                         _"<Image>/Filters/Combine/Arrange as Panorama..."
+                         _"<Image>/Filters/Pandora/Arrange as Panorama..."
                          _"Line up layers as a panorama"
                          "Akkana Peck"
                          "Akkana Peck"
