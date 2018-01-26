@@ -46,7 +46,7 @@ def python_fu_arrow_from_selection(img, layer, arrowangle, arrowsize,
         # from similar triangles
         strokes[2] -= int(round(ratio*dx))
         strokes[3] -= int(round(ratio*dy))
-        
+
         # compute the length of the gradient cycle wanted
         if cyc > 0: cycl_grad = int((l_arrow - l_head)/cyc)
         elif cyc == 0: cycl_grad = 0
@@ -69,8 +69,8 @@ def python_fu_arrow_from_selection(img, layer, arrowangle, arrowsize,
         # Select the arrowhead shape
         pdb.gimp_image_select_polygon(img, CHANNEL_OP_REPLACE, 6, points)
         # Fill the arrowhead
-        pdb.gimp_edit_fill(layer, FOREGROUND_FILL)
-        
+        pdb.gimp_edit_fill(layer, FILL_FOREGROUND)
+
     # Restore the old selection
     pdb.gimp_image_select_item(img, CHANNEL_OP_REPLACE, savesel)
 
@@ -91,7 +91,7 @@ def direc_to_coords(x1, y1, x2, y2, direction) :
         return x2, y1, x1, y1
     elif direction == DIREC_NW :
         return x2, y2, x1, y1
-    
+
 class ArrowWindow(gtk.Window):
     def __init__ (self, img, *args):
         self.img = img
@@ -217,12 +217,12 @@ class ArrowWindow(gtk.Window):
 
         # Make the dialog buttons box
         hbox = gtk.HBox(spacing=20)
-        
+
         btn = gtk.Button("Next arrow")
         btn.connect("pressed", self.next_arrow)
         hbox.add(btn)
         btn.show()
-        
+
         btn = gtk.Button("Close")
         btn.connect("clicked", self.close_window)
         hbox.add(btn)
@@ -233,7 +233,7 @@ class ArrowWindow(gtk.Window):
         vbox.show()
         self.show()
 
-        timeout_add(300, self.update, self)    
+        timeout_add(300, self.update, self)
 
         return win
 
@@ -278,7 +278,10 @@ class ArrowWindow(gtk.Window):
         self.changed = False
 
         # Clear the layer, erasing the old arrow
-        self.layer.fill(TRANSPARENT_FILL)
+        # pdb.gimp_edit_clear(self.layer)
+        # self.layer.fill(TRANSPARENT_FILL)
+
+        self.layer.fill(FILL_TRANSPARENT)
 
         # Draw the new arrow.
         # Order is from, to: arrowhead goes on second X, Y pair.
@@ -294,13 +297,13 @@ class ArrowWindow(gtk.Window):
                                 RGBA_IMAGE, 100, NORMAL_MODE)
         self.img.add_layer(self.layer, 0)
         pdb.gimp_displays_flush()
-    
+
 def arrow_designer(image, layer):
     image.undo_group_start()
-    
+
     r = ArrowWindow(image)
     gtk.main()
-        
+
     # pdb.gimp_selection_none(image)
     image.undo_group_end()
 
