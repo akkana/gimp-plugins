@@ -27,7 +27,7 @@
 # The copy, if any, is saved in a parasite:
 # export-scaled: filename\npercent\nwidth\nheight
 
-# This plug-in is hosted at http://github.com/akkana/gimp-plugins/saver.py
+# This plug-in is hosted at https://github.com/akkana/gimp-plugins/blob/master/saver.py
 
 # Copyright 2013,2014 by Akkana Peck, http://www.shallowsky.com/software/
 # You may use and distribute this plug-in under the terms of the GPL v2
