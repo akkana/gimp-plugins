@@ -1,4 +1,5 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Draw arrows in GIMP, using the selection as a guide for where to draw.
 #
@@ -111,6 +112,14 @@ class ArrowWindow(gtk.Window):
         # Create the dialog
         win = gtk.Window.__init__(self, *args)
         self.set_title("GIMP arrow tool")
+
+        # Mac may have a problem with the window disappearing below
+        # the image window. But on small screens, the window is big
+        # enough that it can block a lot of the image window.
+        # Ideally, it would be nice to make sure it's initially
+        # on top, but then let the user hide it later.
+        # Or make a checkbox for it in the dialog, but that would
+        # make the dialog even bigger.
         #self.set_keep_above(True) # keep the window on top
 
         # Obey the window manager quit signal:
