@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # wallpaper.py v. 0.4: a script to aid in making desktop backgrounds.
 # Start by making a selection (use Save Options in the Tool Options
@@ -40,10 +40,11 @@ common_resolutions = [
     [ 1024, 768 ],
 #    [ 1600, 1200 ],
     [ 1680, 1050 ],
-    [ 1366, 768 ],
+#     [ 1366, 768 ],
     [ 1039, 697 ],
 #    [ 1280, 1024 ],
     [ 1080, 1920 ],
+    [ 1920, 1080 ],
 ]
 
 #
@@ -76,7 +77,7 @@ def python_wallpaper(img, layer) :
         errdialog.run()
         return
     #print "Making wallpaper of size", width, "x", height
-            
+
     # If it's an XCF, save it as a JPG
     # However, in gimp 2.8, img.name is "Untitled" if the image
     # hasn't been saved as an XCF, which this image likely hasn't.
@@ -128,12 +129,9 @@ def python_wallpaper(img, layer) :
     # but pdb.gimp_edit_paste_as_new_image() isn't available until 2.9.
     # isn't available in GIMP 2.8.
     version = map(int, pdb.gimp_version().split('.'))
-    print version
     if version[0] > 2 or version[0] == 2 and version[1] > 8:
-        print "New version"
         newimg = pdb.gimp_edit_paste_as_new_image()
     else:
-        print "Old version"
         newimg = pdb.gimp_edit_paste_as_new()
 
     # Paste-as-new creates an image with transparency,
