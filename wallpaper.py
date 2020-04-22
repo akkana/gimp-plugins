@@ -28,7 +28,7 @@ wallpaperdir = os.path.join(os.getenv("HOME"), "Images/Backgrounds")
 # The script will choose the size with the aspect ratio closest
 # to the aspect ratio of the selection.
 #
-# WARNING! 1600x1200 and 1024x768 have the same 4x3 aspect ratio.
+# WARNING! many of these have the same 4x3 aspect ratio.
 # Therefore, only one of them will work here. Choose one.
 # If you want both, you'll have to write a little more code
 # to produce two images in that case.
@@ -37,14 +37,16 @@ wallpaperdir = os.path.join(os.getenv("HOME"), "Images/Backgrounds")
 # through some sort of nice gui, and saved in preferences. :-)
 #
 common_resolutions = [
-    [ 1024, 768 ],
+    [ 1920, 1200 ],
+    [ 1920, 1080 ],
 #    [ 1600, 1200 ],
     [ 1680, 1050 ],
-#     [ 1366, 768 ],
-    [ 1039, 697 ],
+    [ 1366, 768 ],
 #    [ 1280, 1024 ],
+#    [ 1024, 768 ],
+#    [ 1039, 697 ],
+
     [ 1080, 1920 ],
-    [ 1920, 1080 ],
 ]
 
 #
