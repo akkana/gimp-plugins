@@ -26,11 +26,13 @@ from gi.repository import Gio
 import sys, os
 
 # goat-exercise imports these only if INTERACTIVE,
-# but when I try that, I get an exception because Gtk isn't defined.
+# but when I try that, I get an exception because Gtk isn't defined
+# even though I don't call any of the Gtk functions.
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk
+
 
 import gettext
 _ = gettext.gettext
@@ -38,12 +40,21 @@ def N_(message): return message
 
 
 class BlobiPy (Gimp.PlugIn):
+    ## Parameters ##
+    __gproperties__ = {
+        "blur": (float,
+                    _("Blur"),
+                    _("Blur"),
+                    0.0, 100.0, 5.0,
+                    GObject.ParamFlags.READWRITE),
+    }
+
     def do_query_procedures(self):
         # Localization
         self.set_translation_domain("gimp30-python",
                                     Gio.file_new_for_path(Gimp.locale_directory()))
 
-        return [ "blobipy" ]
+        return [ "python-fu-blobipy" ]
 
     def do_create_procedure(self, name):
         """Register as a GIMP plug-in"""
@@ -53,13 +64,15 @@ class BlobiPy (Gimp.PlugIn):
 
         procedure.set_image_types("*");
 
-        procedure.set_menu_label("BlobiPy");
+        procedure.set_menu_label("_BlobiPy");
         procedure.set_icon_name(GimpUi.ICON_GEGL);
-        # procedure.add_menu_path('<Image>/Image/Light and Shadow/');
-        procedure.add_menu_path('<Image>/Filters/');
+        procedure.add_menu_path('<Image>/Filters/Light and Shadow/');
 
-        procedure.set_documentation("Make a layer look blobby and puffed out",
-                                    "Make a layer look blobby and puffed out",
+        # Add parameters
+        procedure.add_argument_from_property(self, "blur")
+
+        procedure.set_documentation("Give a puffy, 3-D appearance",
+                                    "Give a layer a puffy, 3-D appearance",
                                     name);
         procedure.set_attribution("Akkana Peck", "Akkana Peck", "2003,2020");
 
@@ -90,7 +103,6 @@ class BlobiPy (Gimp.PlugIn):
                                        GObject.Value(GObject.TYPE_DOUBLE, -3),
                                        GObject.Value(GObject.TYPE_DOUBLE, -3),
                                        GObject.Value(GObject.TYPE_DOUBLE,blur),
-                                       # GObject.Value(Gimp.RGB, (0, 0, 0)),
                                        c,
                                        GObject.Value(GObject.TYPE_DOUBLE, 80.0),
                                        GObject.Value(GObject.TYPE_BOOLEAN, False)
@@ -100,25 +112,32 @@ class BlobiPy (Gimp.PlugIn):
         Gimp.get_pdb().run_procedure('gimp-image-undo-group-end', [img])
 
 
-    def run(self, procedure, run_mode, image, drawable, args, run_data):
-        """Called when the user invokes the plug-in from the menu,
-           or when another plug-in calls it.
+    def run(self, procedure, run_mode, image, drawable, args, data):
+        """Called when the user invokes the plug-in from the menu
+           or as "Repeat", or when another plug-in calls it.
         """
+        blur = args.index(0)
         if run_mode == Gimp.RunMode.INTERACTIVE:
             GimpUi.init("blobi.py")
 
             dialog = self.blob_dialog()
 
             while (True):
-                response = dialog.run()
+                response  = dialog.run()
                 if response == Gtk.ResponseType.OK:
                     dialog.destroy()
-                    self.python_blobify(image, drawable, 8)
+                    blur = self.blurspin.get_value()
                     break
                 else:
                     dialog.destroy()
                     return procedure.new_return_values(
                         Gimp.PDBStatusType.CANCEL, GLib.Error())
+
+        elif run_mode == Gimp.RunMode.WITH_LAST_VALS:
+            print("Sorry, I don't know how to get the last values")
+
+        print("Running with blur =", blur)
+        self.python_blobify(image, drawable, blur)
 
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                            GLib.Error())
@@ -126,22 +145,28 @@ class BlobiPy (Gimp.PlugIn):
     # Eventually GIMP will create a parameter dialog automatically,
     # but until then, need to build it here.
     def blob_dialog(self):
-        """Bring up a dialog prompting for blobipy options"""
-        dialog = GimpUi.Dialog(use_header_bar=True,
-                               title=_("Make a layer look blobby"),
+        """Bring up a dialog prompting for blobipy options.
+           Return (response, blur)
+        """
+        use_header_bar = Gtk.Settings.get_default().get_property(
+            "gtk-dialogs-use-header")
+        dialog = GimpUi.Dialog(use_header_bar=use_header_bar,
+                               title=_("Give a puffy, 3-D appearance"),
                                role="blobypy")
 
         dialog.add_button("_Cancel", Gtk.ResponseType.CANCEL)
         dialog.add_button("_OK", Gtk.ResponseType.OK)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        dialog.get_content_area().add(box)
-        box.show()
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                       homogeneous=False, spacing=10)
+        dialog.get_content_area().add(vbox)
+        vbox.show()
 
-        head_text=("This plug-in makes things look blobby")
-        label = Gtk.Label(label=head_text)
-        box.pack_start(label, False, False, 1)
-        label.show()
+        self.blurspin = Gtk.SpinButton.new_with_range(0., 50., 1.)
+        self.blurspin.set_value(5)
+        vbox.pack_start(self.blurspin, False, False, 0)
+        self.blurspin.show()
+
 
         return dialog
 
