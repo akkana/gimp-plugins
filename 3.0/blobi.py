@@ -81,16 +81,14 @@ class BlobiPy (Gimp.PlugIn):
     def python_blobify(self, img, layer, blur):
         """The function that actually does the work"""
 
-        Gimp.get_pdb().run_procedure('gimp-image-undo-group-start',
-                                     [GObject.Value(Gimp.Image, img)])
+        img.undo_group_start()
 
-        Gimp.get_pdb().run_procedure('gimp-image-select-item',
-                                     [ GObject.Value(Gimp.Image, img),
-                                       Gimp.ChannelOps.REPLACE,
-                                       GObject.Value(Gimp.Item, layer) ])
+        img.select_item(Gimp.ChannelOps.REPLACE, layer)
 
-        Gimp.get_pdb().run_procedure('gimp-selection-invert',
-                                     [GObject.Value(Gimp.Image, img)])
+        # Gimp.get_pdb().run_procedure('gimp-selection-invert',
+        #                              [GObject.Value(Gimp.Image, img)])
+        Gimp.Selection.invert(img)
+
         c = Gimp.RGB()
         c.r = 0
         c.g = 0
@@ -107,15 +105,20 @@ class BlobiPy (Gimp.PlugIn):
                                        GObject.Value(GObject.TYPE_DOUBLE, 80.0),
                                        GObject.Value(GObject.TYPE_BOOLEAN, False)
                                      ])
-        Gimp.get_pdb().run_procedure('gimp-selection-none', [img])
+        # Gimp.get_pdb().run_procedure('gimp-selection-none', [img])
+        Gimp.Selection.none(img)
 
-        Gimp.get_pdb().run_procedure('gimp-image-undo-group-end', [img])
+        img.undo_group_end()
 
 
     def run(self, procedure, run_mode, image, drawable, args, data):
         """Called when the user invokes the plug-in from the menu
            or as "Repeat", or when another plug-in calls it.
         """
+        config = procedure.create_config()
+        config.begin_run(image, run_mode, args)
+        blur = config.get_property("blur")
+
         blur = args.index(0)
         if run_mode == Gimp.RunMode.INTERACTIVE:
             GimpUi.init("blobi.py")
@@ -133,12 +136,13 @@ class BlobiPy (Gimp.PlugIn):
                     return procedure.new_return_values(
                         Gimp.PDBStatusType.CANCEL, GLib.Error())
 
-        elif run_mode == Gimp.RunMode.WITH_LAST_VALS:
-            print("Sorry, I don't know how to get the last values")
+        # Gimp.RunMode.WITH_LAST_VALS should take care of itself
 
         print("Running with blur =", blur)
         self.python_blobify(image, drawable, blur)
 
+        config.set_property('blur', blur)
+        config.end_run(Gimp.PDBStatusType.SUCCESS)
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                            GLib.Error())
 
