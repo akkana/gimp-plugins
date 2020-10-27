@@ -52,7 +52,7 @@ class BlobiPy (Gimp.PlugIn):
     def do_query_procedures(self):
         # Localization
         self.set_translation_domain("gimp30-python",
-                                    Gio.file_new_for_path(Gimp.locale_directory()))
+                               Gio.file_new_for_path(Gimp.locale_directory()))
 
         return [ "python-fu-blobipy" ]
 
@@ -85,15 +85,10 @@ class BlobiPy (Gimp.PlugIn):
 
         img.select_item(Gimp.ChannelOps.REPLACE, layer)
 
-        # Gimp.get_pdb().run_procedure('gimp-selection-invert',
-        #                              [GObject.Value(Gimp.Image, img)])
         Gimp.Selection.invert(img)
 
         c = Gimp.RGB()
-        c.r = 0
-        c.g = 0
-        c.b = 0
-        c.a = 1
+        c.set(0, 0, 0)
         Gimp.get_pdb().run_procedure('script-fu-drop-shadow',
                                      [ Gimp.RunMode.NONINTERACTIVE,
                                        GObject.Value(Gimp.Image, img),
@@ -103,7 +98,8 @@ class BlobiPy (Gimp.PlugIn):
                                        GObject.Value(GObject.TYPE_DOUBLE,blur),
                                        c,
                                        GObject.Value(GObject.TYPE_DOUBLE, 80.0),
-                                       GObject.Value(GObject.TYPE_BOOLEAN, False)
+                                       GObject.Value(GObject.TYPE_BOOLEAN,
+                                                     False)
                                      ])
         # Gimp.get_pdb().run_procedure('gimp-selection-none', [img])
         Gimp.Selection.none(img)
