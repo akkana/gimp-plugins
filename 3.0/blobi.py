@@ -37,10 +37,6 @@ class BlobiPy (Gimp.PlugIn):
     }
 
     def do_query_procedures(self):
-        # Localization
-        self.set_translation_domain("gimp30-python",
-                               Gio.file_new_for_path(Gimp.locale_directory()))
-
         return [ "python-fu-blobipy" ]
 
     def do_create_procedure(self, name):
