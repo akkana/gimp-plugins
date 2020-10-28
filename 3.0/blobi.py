@@ -4,6 +4,9 @@
 # Copyright 2003, 2020 by Akkana Peck.
 # Share and enjoy under the GPLv2 or later.
 
+# IMPORTANT: This needs gimphelpers.py (available at the same
+# place you got blobi.py) installed somewhere in your PYTHONPATH.
+
 import gi
 gi.require_version('Gimp', '3.0')
 from gi.repository import Gimp
@@ -13,7 +16,7 @@ gi.require_version('Gegl', '0.4')
 from gi.repository import Gegl
 from gi.repository import GObject
 from gi.repository import GLib
-from gi.repository import Gio
+# from gi.repository import Gio
 
 # goat-exercise imports these only if INTERACTIVE,
 # but when I try that, I get an exception because Gtk isn't defined
@@ -24,6 +27,8 @@ gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk
 
 import sys, os
+
+from gimphelpers import run_plug_in
 
 
 class BlobiPy (Gimp.PlugIn):
@@ -72,19 +77,23 @@ class BlobiPy (Gimp.PlugIn):
 
         c = Gimp.RGB()
         c.set(0, 0, 0)
-        Gimp.get_pdb().run_procedure('script-fu-drop-shadow',
-                                     [ Gimp.RunMode.NONINTERACTIVE,
-                                       GObject.Value(Gimp.Image, img),
-                                       GObject.Value(Gimp.Drawable, layer),
-                                       GObject.Value(GObject.TYPE_DOUBLE, -3),
-                                       GObject.Value(GObject.TYPE_DOUBLE, -3),
-                                       GObject.Value(GObject.TYPE_DOUBLE,blur),
-                                       c,
-                                       GObject.Value(GObject.TYPE_DOUBLE, 80.0),
-                                       GObject.Value(GObject.TYPE_BOOLEAN,
-                                                     False)
-                                     ])
-        # Gimp.get_pdb().run_procedure('gimp-selection-none', [img])
+        run_plug_in('script-fu-drop-shadow', img, layer, -3, -3, blur,
+                    c, 80.0, False)
+
+        # Gimp.get_pdb().run_procedure('script-fu-drop-shadow',
+        #                              [ Gimp.RunMode.NONINTERACTIVE,
+        #                                GObject.Value(Gimp.Image, img),
+        #                                GObject.Value(Gimp.Drawable, layer),
+        #                                GObject.Value(GObject.TYPE_DOUBLE, -3),
+        #                                GObject.Value(GObject.TYPE_DOUBLE, -3),
+        #                                GObject.Value(GObject.TYPE_DOUBLE,blur),
+        #                                c,
+        #                                GObject.Value(GObject.TYPE_DOUBLE, 80.0),
+        #                                GObject.Value(GObject.TYPE_BOOLEAN,
+        #                                              False)
+        #                              ])
+
+        Gimp.get_pdb().run_procedure('gimp-selection-none', [img])
         Gimp.Selection.none(img)
 
         img.undo_group_end()
