@@ -80,6 +80,7 @@ class BlobiPy (Gimp.PlugIn):
         run_plug_in('script-fu-drop-shadow', img, layer, -3, -3, blur,
                     c, 80.0, False)
 
+        # If not using gimphelpers, here's how to call a plug-in:
         # Gimp.get_pdb().run_procedure('script-fu-drop-shadow',
         #                              [ Gimp.RunMode.NONINTERACTIVE,
         #                                GObject.Value(Gimp.Image, img),
@@ -106,8 +107,8 @@ class BlobiPy (Gimp.PlugIn):
         config = procedure.create_config()
         config.begin_run(image, run_mode, args)
         blur = config.get_property("blur")
+        # blur = args.index(0)
 
-        blur = args.index(0)
         if run_mode == Gimp.RunMode.INTERACTIVE:
             GimpUi.init("blobi.py")
 
