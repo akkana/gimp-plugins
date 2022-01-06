@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # fontasia 0.7:
 # List all fonts on the system and let the user group them into categories.
@@ -588,9 +588,9 @@ class FontApp(gtk.Window):
     #    self.update_font_list()
 
     def change_button_color(self, btn, yesno):
-        if self.oldcolors == None:
+        if self.oldcolors is None:
             self.oldcolors = btn.get_modifier_style().bg
-        if self.highlightcolor == None:
+        if self.highlightcolor is None:
             self.highlightcolor = gtk.gdk.Color(0, 65535, 0)
         if yesno:
             btn.modify_bg(gtk.STATE_NORMAL, self.highlightcolor)
