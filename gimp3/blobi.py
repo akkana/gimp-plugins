@@ -66,8 +66,6 @@ def blobipy(procedure, run_mode, image, n_drawables, drawables, args, data):
         GObject.Value(Gimp.Image, image),
     ])
 
-    print("color type:", type(color))
-
     # Make a dropshadow from the inverted selection
     Gimp.get_pdb().run_procedure('script-fu-drop-shadow', [
         GObject.Value(Gimp.RunMode, Gimp.RunMode.NONINTERACTIVE),
@@ -102,13 +100,6 @@ class BlobiPy(Gimp.PlugIn):
                  0, 50, 7,
                  GObject.ParamFlags.READWRITE),
     }
-    # Workaround copied from foggify.py until GIMP can handle color args
-    # in the regular __gproperties__ list
-    black = Gimp.RGB()
-    black.set(0, 0, 0)
-    color = GObject.Property(type =Gimp.RGB, default=black,
-                             nick =_("_Shadow color"),
-                             blurb=_("Shadow color"))
 
     ## GimpPlugIn virtual methods ##
     def do_set_i18n(self, procname):
@@ -118,6 +109,14 @@ class BlobiPy(Gimp.PlugIn):
         return [ 'python-fu-blobipy' ]
 
     def do_create_procedure(self, name):
+        # Workaround copied from foggify.py until GIMP can handle color args
+        # in the regular __gproperties__ list
+        black = Gimp.RGB()
+        black.set(0, 0, 0)
+        color = GObject.Property(type =Gimp.RGB, default=black,
+                                 nick =_("_Shadow color"),
+                                 blurb=_("Shadow color"))
+
         procedure = Gimp.ImageProcedure.new(self, name,
                                             Gimp.PDBProcType.PLUGIN,
                                             blobipy, None)

@@ -4,6 +4,10 @@ These are all licensed under the GPL v2 or (at your option) any later GPL.
 There's further discussion of some of them on my software page:
 http://www.shallowsky.com/software/#gimp
 
+I'm working on translating these plug-ins to the new API in Gimp 2.99/3.0.
+That API isn't stable yet, but you'll find the plug-ins that have been
+translated so far under the "gimp3" directory.
+
 ===============
 SAVE/EXPORT PLUG-INS (PYTHON):
 
