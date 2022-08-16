@@ -57,8 +57,6 @@ class ArrowDesigner (Gimp.PlugIn):
                       GObject.ParamFlags.READWRITE),
     }
 
-    _the_arrow_designer = None
-
     ## GimpPlugIn virtual methods ##
     def do_set_i18n(self, procname):
         return True, 'gimp30-python', None
@@ -68,7 +66,6 @@ class ArrowDesigner (Gimp.PlugIn):
 
     def do_create_procedure(self, name):
         """Register as a GIMP plug-in"""
-        ArrowDesigner._the_arrow_designer = self
         procedure = Gimp.ImageProcedure.new(self, name,
                                             Gimp.PDBProcType.PLUGIN,
                                             self.run, None)
@@ -237,7 +234,7 @@ class ArrowWindow(Gtk.Window):
 
         # Create the dialog
         win = Gtk.Window.__init__(self)
-        self.set_title("GIMP arrow designer")
+        self.set_title("GIMP Arrow Designer")
 
         # Mac may have a problem with the window disappearing below
         # the image window. But on small screens, the window is big
@@ -251,7 +248,6 @@ class ArrowWindow(Gtk.Window):
         # Obey the window manager quit signal:
         self.connect("destroy", Gtk.main_quit)
 
-        # Make the UI
         self.set_border_width(10)
         vbox = Gtk.VBox(spacing=10, homogeneous=False)
         self.add(vbox)
