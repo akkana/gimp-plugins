@@ -140,7 +140,7 @@ class SaverPlugin(Gimp.PlugIn):
         # First, save the original image.
         if is_xcf(filepath) or len(layers) < 2:
             mainres = gimp_file_save(image, layers, filepath)
-            print("saved xcf to", filepath)
+            print("saved original to", filepath)
         else:
             # It's not XCF and it has multiple layers.
             # We need to make a new image and flatten it.
@@ -364,7 +364,7 @@ class SaverPlugin(Gimp.PlugIn):
                 return procedure.new_return_values(Gimp.PDBStatusType.CANCEL,
                                                    GLib.Error())
 
-            #### Save the main file
+            #### Save both the main file and a copy (if specified)
             filepath = chooser.get_filename()
             copyname, percent, copywidth, copyheight = chooser.get_copy_info()
             print("copyname:", copyname)
@@ -374,10 +374,12 @@ class SaverPlugin(Gimp.PlugIn):
 
             save_err = self.save_both(image, filepath,
                                       copyname, copywidth, copyheight)
-            if not save_err:
+            if save_err.index(0) == Gimp.PDBStatusType.SUCCESS:
+                print("Success")
+                chooser.destroy()
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
-            print("SAVER:", save_err, file=sys.stderr)
+            print("SAVER looping:", save_err, file=sys.stderr)
 
 
 class SaverChooserWin(Gtk.FileChooserDialog):
