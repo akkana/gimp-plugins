@@ -402,10 +402,14 @@ class SaverChooserWin(Gtk.FileChooserDialog):
         # Obey the window manager quit signal:
         self.connect("destroy", Gtk.main_quit)
 
-        path = image.get_file().get_path()
-        print("Path:", path)
-        self.set_current_folder(os.path.dirname(path))
-        self.set_filename(path)
+        imagefile = image.get_file()
+        if imagefile:
+            path = image.get_file().get_path()
+            print("Path:", path)
+            self.set_current_folder(os.path.dirname(path))
+            self.set_filename(path)
+        else:
+            print("saver: image doesn't have a filename yet")
 
         # filter = Gtk.FileFilter()
         # filter.set_name(_("All files (*)"))
