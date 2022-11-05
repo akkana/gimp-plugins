@@ -123,11 +123,11 @@ class SaverPlugin(Gimp.PlugIn):
         '''Save the image, and also save the copy if appropriate,
            doing any duplicating or scaling that might be necessary.
            Returns None on success, else a nonempty string error message.
+           Also sets the image's filename to filepath.
         '''
         msg = "Saving " + filepath
 
         layers = image.list_selected_layers()
-        # print("layers:", type(layers), layers)
 
         def is_xcf(thefilename):
             base, ext = os.path.splitext(thefilename)
@@ -154,18 +154,17 @@ class SaverPlugin(Gimp.PlugIn):
             gimp.delete(copyimg)
             print("merged layers then saved to", filepath)
 
-        print("result of main img gimp-file-save:", mainres, mainres.index(0))
+        # print("result of main img gimp-file-save:", mainres, mainres.index(0))
         if (mainres.index(0) != Gimp.PDBStatusType.SUCCESS):
             print("gimp-file-save failed: %s" % mainres, file=sys.stderr)
             return mainres.index(0)
 
-        # We've done the important part, so mark the image clean.
-        image.filename = filepath
+        # The important part is done, so mark the image clean
+        # and record the filename: set_file expects a Gio.File.
+        image.set_file(Gio.File.new_for_path(filepath))
         image.clean_all()
 
-        print("copyname:", copyname)
-        print("copywidth:", copywidth)
-        print("copyheight:", copyheight)
+        print("Saver: copy is %s (%dx%d)" % (copyname, copywidth, copyheight))
 
         # Now try to save the copy, if applicable
         if (not copyname or not copywidth or not copyheight or
@@ -178,8 +177,8 @@ class SaverPlugin(Gimp.PlugIn):
         # Set up the parasite with information about the copied image,
         # so it will be saved with the main XCF image.
         if copywidth and copyheight:
-            print("percent is", copywidth, "* 100.0 /", image.get_width())
-            print("types:", type(copywidth), type(image.get_width()))
+            # print("percent is", copywidth, "* 100.0 /", image.get_width())
+            # print("types:", type(copywidth), type(image.get_width()))
             percent = copywidth * 100.0 / image.get_width()
             # Note that this allows changed aspect ratios,
             # though the Saver As dialog doesn't allow that.
@@ -210,10 +209,8 @@ class SaverPlugin(Gimp.PlugIn):
         # the dirname of the main image.
         if copyname.startswith('/'):
             copypath = copyname
-            print(copypath, "is already a full path")
         else:
             copypath = os.path.join(os.path.dirname(filepath), copyname)
-            print("Turning", copyname, "into full path:", copypath)
 
         # Now the parasite is safely attached, and we can save to copypath.
         # Alas, we can't attach the JPEG settings parasite until after
@@ -230,7 +227,6 @@ class SaverPlugin(Gimp.PlugIn):
             copyimg = image.duplicate()
             print("Scaling to", copywidth, 'x', copyheight)
             copyimg.scale(copywidth, copyheight)
-            print("Scaled")
             if len(imglayers) > 1 and not is_xcf(copyname):
                 copyimg.merge_visible_layers(copyimg, CLIP_TO_IMAGE)
                 print("Also merging")
@@ -251,10 +247,8 @@ class SaverPlugin(Gimp.PlugIn):
         # gimp-file-save insists on being passed a valid layer,
         # even if saving to a multilayer format such as XCF. Go figure.
         copylayers = copyimg.list_selected_layers()
-        print("Calling gimp_file_save for copy",
-              copyimg, copylayers, copypath)
+        print("Calling gimp_file_save for copy", copyimg, copylayers, copypath)
         copyres = gimp_file_save(copyimg, copylayers, copypath)
-        print("gimp_file_save returned", copyres, copyres)
         if (copyres.index(0) != Gimp.PDBStatusType.SUCCESS):
             print("Failed to save the copy")
             return copyres.index(0)
@@ -313,8 +307,6 @@ class SaverPlugin(Gimp.PlugIn):
         # print("args:", [x for x in args])
         # print("data:", [x for x in data])
 
-        print("image.get_file() =", image.get_file())
-
         if not image.get_file():    # No filename set yet
             print("No filename set! Showing dialog")
             return self.saver_as_dialog(procedure, run_mode,
@@ -335,8 +327,8 @@ class SaverPlugin(Gimp.PlugIn):
                                   self.copyname,
                                   self.export_width, self.export_height)
         print("save_both returned", save_err)
-        print("Now image.get_file() is", image.get_file())
-        print("Now image.get_file() is", image.get_file().get_path())
+        print("Now image.get_file() is",
+              image.get_file(), image.get_file().get_path())
 
     def saver_as_dialog(self, procedure, run_mode, image,
                         n_drawables, drawables,
@@ -367,15 +359,10 @@ class SaverPlugin(Gimp.PlugIn):
             #### Save both the main file and a copy (if specified)
             filepath = chooser.get_filename()
             copyname, percent, copywidth, copyheight = chooser.get_copy_info()
-            print("copyname:", copyname)
-            print("percent:", percent)
-            print("copywidth:", copywidth)
-            print("copyheight:", copyheight)
 
             save_err = self.save_both(image, filepath,
                                       copyname, copywidth, copyheight)
             if save_err.index(0) == Gimp.PDBStatusType.SUCCESS:
-                print("Success")
                 chooser.destroy()
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
@@ -405,7 +392,7 @@ class SaverChooserWin(Gtk.FileChooserDialog):
         imagefile = image.get_file()
         if imagefile:
             path = image.get_file().get_path()
-            print("Path:", path)
+            print("Existing path:", path)
             self.set_current_folder(os.path.dirname(path))
             self.set_filename(path)
         else:
