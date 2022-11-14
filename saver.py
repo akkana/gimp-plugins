@@ -113,11 +113,25 @@ def save_both(img, drawable, filename, copyname, width, height):
             ext = ext.lower()
         return (ext == '.xcf')
 
+    # With the new "crop doesn't really crop", gimp_file_save saves the
+    # whole image, not the cropped version.
+    # So detect cropping or anything else that might make layers
+    # be sized differently from the image.
+    def different_size_layer(img):
+        for l in img.layers:
+            if l.width != img.width:
+                return True
+            if l.height != img.height:
+                return True
+        return False
+
     # First, save the original image.
-    if is_xcf(filename) or len(img.layers) < 2:
+    if is_xcf(filename) or (len(img.layers) < 2
+                            and not different_size_layer(img)):
         pdb.gimp_file_save(img, drawable, filename, filename)
     else:
-        # It's not XCF and it has multiple layers.
+        # It's not XCF and it has multiple layers,
+        # or one layer that's been cropped.
         # We need to make a new image and flatten it.
         copyimg = pdb.gimp_image_duplicate(img)
         # Don't actually flatten since that will prevent saving transparent png.
