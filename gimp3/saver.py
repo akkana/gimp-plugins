@@ -57,16 +57,17 @@ busy = False
 
 def gimp_file_save(image, layers, filepath):
     """A PDB helper. Returns a Gimp.PDBStatusType"""
-    return Gimp.get_pdb().run_procedure('gimp-file-save', [
-        GObject.Value(Gimp.RunMode, Gimp.RunMode.NONINTERACTIVE),
-        GObject.Value(Gimp.Image, image),
-        # Unlike some calls, file-save needs the size before the array
-        GObject.Value(GObject.TYPE_INT, len(layers)),
-        GObject.Value(Gimp.ObjectArray,
-                      Gimp.ObjectArray.new(Gimp.Drawable,
-                                          layers, False)),
-        GObject.Value(Gio.File, Gio.File.new_for_path(filepath))
-    ])
+
+    pdb = Gimp.get_pdb()
+    pdb_proc = pdb.lookup_procedure('gimp-file-save')
+    pdb_config = pdb_proc.create_config()
+    pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
+    pdb_config.set_property('image', image)
+    pdb_config.set_property('num-drawables', len(layers))
+    pdb_config.set_property('drawables', Gimp.ObjectArray.new(Gimp.Drawable,
+                                                              layers, False))
+    pdb_config.set_property('file', Gio.File.new_for_path(filepath))
+    return pdb_proc.run(pdb_config)
 
 
 # A way to turn off notifications while we're calculating
@@ -88,6 +89,8 @@ class SaverPlugin(Gimp.PlugIn):
     def do_create_procedure(self, name):
         """Register as a GIMP plug-in"""
 
+        print("do_create_procedure", name)
+
         if name == "python-fu-saver-as":
             procedure = Gimp.ImageProcedure.new(self, name,
                                                 Gimp.PDBProcType.PLUGIN,
@@ -105,16 +108,18 @@ class SaverPlugin(Gimp.PlugIn):
         # Both Saver and Saver As use all of the following
         procedure.set_image_types("*");
 
-        procedure.set_icon_name(GimpUi.ICON_GEGL);
-        procedure.add_menu_path('<Image>/File/Save/');
+        # procedure.set_icon_name(GimpUi.ICON_GEGL);
+        # In the new API, use File/[Save] for the Save section of the File menu
+        # https://gitlab.gnome.org/GNOME/gimp/-/blob/master/NEWS?ref_type=heads#L85
+        procedure.add_menu_path('<Image>/File/[Save]')
 
         procedure.set_documentation(
             "Save/export the current image",
             "Save/export the current image, "
-            "optionally also exporting a scaled version",
+                "optionally also exporting a scaled version",
             name);
         procedure.set_attribution("Akkana Peck", "Akkana Peck",
-                                  "2010,2011,2022");
+                                  "2010,2011,2022,2023");
 
         return procedure
 
@@ -161,6 +166,8 @@ class SaverPlugin(Gimp.PlugIn):
 
         # The important part is done, so mark the image clean
         # and record the filename: set_file expects a Gio.File.
+        # Sadly, image.set_file no longer works because it will only
+        # accept an XCF.
         image.set_file(Gio.File.new_for_path(filepath))
         image.clean_all()
 
@@ -337,8 +344,8 @@ class SaverPlugin(Gimp.PlugIn):
         self.init_from_parasite(image)
 
         # Are the next two lines needed if we don't fetch any properties?
-        config = procedure.create_config()
-        config.begin_run(image, run_mode, args)
+        # config = procedure.create_config()
+        # config.begin_run(image, run_mode, args)
 
         if run_mode != Gimp.RunMode.INTERACTIVE:
             print("EEK, 'saver as' but not interactive?")
