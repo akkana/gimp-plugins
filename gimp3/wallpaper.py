@@ -46,7 +46,7 @@ wallpaperdir = os.path.join(os.getenv("HOME"), "Images/Backgrounds")
 # The script will choose the size with the aspect ratio closest
 # to the aspect ratio of the selection.
 #
-# WARNING! many of these have the same 4x3 aspect ratio.
+# WARNING! many of these have the same aspect ratio, or close enough.
 # Therefore, only one of them will work here. Choose one.
 # If you want both, you'll have to write a little more code
 # to produce two images in that case.
@@ -64,8 +64,9 @@ common_resolutions = [
 #    [ 1024, 768 ],
 #    [ 1039, 697 ],
 
-    [ 1080, 1920 ],  # galaxy s5
-    [ 1080, 2220 ],  # pixel 3a
+#    [ 1080, 1920 ],  # galaxy s5
+#    [ 1080, 2220 ],  # pixel 3a
+    [ 1080, 2400 ],  # pixel 6a
 ]
 
 #
@@ -86,10 +87,9 @@ class WallpaperPlugin(Gimp.PlugIn):
         return [ "python-fu-wallpaper" ]
 
     def do_create_procedure(self, name):
-        """Register as a GIMP plug-in"""
-
-        print("Trying to register wallpaper plugin")
-
+        """Register as a GIMP plug-in.
+           This also gets called every time the plug-in is invoked.
+        """
         procedure = Gimp.ImageProcedure.new(self, name,
                                             Gimp.PDBProcType.PLUGIN,
                                             self.wallpaper_dialog, None)
@@ -140,8 +140,6 @@ class WallpaperPlugin(Gimp.PlugIn):
             return procedure.new_return_values(
                 Gimp.PDBStatusType.CALLING_ERROR, GLib.Error(errortext))
 
-        print("Making wallpaper of size", width, "x", height)
-
         # Get the image's filename
         imgfilename = img.get_file()
         # this returns a GLocalFile, which is undocumented.
@@ -175,7 +173,6 @@ class WallpaperPlugin(Gimp.PlugIn):
                             (fulldirpathname, dirpathname)))
 
         pathname = os.path.join(dirpathname, name)
-        print("will save to:", pathname)
 
         pdb = Gimp.get_pdb()
 
@@ -195,12 +192,6 @@ class WallpaperPlugin(Gimp.PlugIn):
         # valarray.index(0) is return status, hopefully 1 is the new image
         newimg = valarray.index(1)
 
-        # Paste-as-new may create an image with transparency,
-        # which will warn if you try to save as jpeg, so:
-        newimg.flatten()
-
-        newimg.scale(width, height)
-
         pdb_proc = pdb.lookup_procedure('gimp-image-get-metadata')
         pdb_config = pdb_proc.create_config()
         # pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
@@ -218,6 +209,12 @@ class WallpaperPlugin(Gimp.PlugIn):
             pdb_proc.run(pdb_config)
         else:
             print("Couldn't get image metadata")
+
+        # Paste-as-new may create an image with transparency,
+        # which will warn if you try to save as jpeg, so:
+        newimg.flatten()
+
+        newimg.scale(width, height)
 
         # Check to make sure we won't be overwriting
         def check_overwrite_cb(widget):
@@ -298,6 +295,8 @@ class WallpaperPlugin(Gimp.PlugIn):
         # pdb.gimp_image_set_filename(newimg, pathname)
 
         if response == Gtk.ResponseType.OK:
+            # Time to save the new image!
+
             dialog.hide()
             dialog.destroy()
             # Neither hide nor destroy will work unless we collect
@@ -306,30 +305,28 @@ class WallpaperPlugin(Gimp.PlugIn):
                 Gtk.main_iteration()
 
             try:
-                pdb = Gimp.get_pdb()
+                # print("GIMP images now:")
+                # for i in Gimp.list_images():
+                #     print(i.get_name(), i.get_width(), i.get_height())
+                #     for l in i.list_layers():
+                #         print("  ", l.get_width(), l.get_height())
                 pdb_proc = pdb.lookup_procedure('gimp-file-save')
                 pdb_config = pdb_proc.create_config()
                 pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
                 pdb_config.set_property('image', newimg)
-                layers = img.list_selected_layers()
+                layers = newimg.list_selected_layers()
+                # print("\nSaving new image", newimg.get_name(),
+                #       newimg.get_width(), "x", newimg.get_height(),
+                #       "to", pathname)
+                # for l in layers:
+                #     print("    layer:", l.get_width(), "x", l.get_height())
+                # print()
+                # The image only has one layer, but this is a lot easier
+                # than trying to find and save the active layer.
                 pdb_config.set_property('num-drawables', len(layers))
                 pdb_config.set_property('drawables',
                                         Gimp.ObjectArray.new(Gimp.Drawable,
                                                              layers, False))
-                '''
-                pdb_config.set_property('num-drawables', 1)
-                pdb_config.set_property('drawables',
-                                        Gimp.ObjectArray.new(
-                                            Gimp.Drawable,
-                                            # images no longer have active_layer
-                                            # or, apparently, any other way to
-                                            # get that, despite spyro-plus still
-                                            # using it (as write-only, though)
-                                            #newimg.active_layer,
-                                            # temporarily, use this insteada:
-                                            img.list_layers()[0],
-                                            False))
-                '''
                 pdb_config.set_property('file', Gio.File.new_for_path(pathname))
                 vals = pdb_proc.run(pdb_config)
                 if vals.index(0) == Gimp.PDBStatusType.SUCCESS:
@@ -349,17 +346,14 @@ class WallpaperPlugin(Gimp.PlugIn):
                 print("Couldn't save!", str(e))
                 # Is it worth bringing up a dialog here?
 
-        elif response == Gtk.ResponseType.CANCEL:
-            # Cancel the whole operation -- don't show the image
-            Gimp.delete(newimg)
-            Gimp.context_pop()
-            return procedure.new_return_values(Gimp.PDBStatusType.CANCEL,
-                                               GLib.Error())
+        # elif response == Gtk.ResponseType.CANCEL:
 
-        # NOTREACHED
+        # Cancel the whole operation -- don't show the image
+        newimg.delete
+        # Gimp.context_pop()
         return procedure.new_return_values(Gimp.PDBStatusType.CANCEL,
                                            GLib.Error())
 
-Gimp.main(WallpaperPlugin.__gtype__, sys.argv)
 
+Gimp.main(WallpaperPlugin.__gtype__, sys.argv)
 
