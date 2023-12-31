@@ -68,7 +68,7 @@ class ArrowDesigner (Gimp.PlugIn):
         """Register as a GIMP plug-in"""
         procedure = Gimp.ImageProcedure.new(self, name,
                                             Gimp.PDBProcType.PLUGIN,
-                                            self.run, None)
+                                            self.show_arrowdesigner, None)
 
         procedure.set_image_types("*");
 
@@ -82,19 +82,17 @@ class ArrowDesigner (Gimp.PlugIn):
         procedure.add_argument_from_property(self, "direction")
 
         procedure.set_documentation(
-            "Draw an arrow following the selection (interactive).",
-            "Draw an arrow following the current selection, "
-            "updating as the selection changes",
+            "Draw an arrow based on the selection",
+            "Draw an arrow based on the current selection, "
+            "updating interactively as the selection changes",
             name);
         procedure.set_attribution("Akkana Peck", "Akkana Peck",
-                                  "2010,2011,2022");
+                                  "2010,2011,2022,2023");
 
         return procedure
 
-    def run(self, procedure, run_mode, image, n_drawables, drawables,
-            args, data):
-        config = procedure.create_config()
-        config.begin_run(image, run_mode, args)
+    def show_arrowdesigner(self, procedure, run_mode, image, n_layers, layers,
+                           config, data):
         angle = config.get_property("angle")
         size = config.get_property("size")
         direction = config.get_property("direction")
@@ -104,6 +102,9 @@ class ArrowDesigner (Gimp.PlugIn):
 
             r = ArrowWindow(image, angle, size, direction)
             Gtk.main()
+        else:
+            print("Non-interactive arrow designer, I'm not sure what to do!",
+                  file=sys.stderr)
 
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                            GLib.Error())
@@ -304,7 +305,8 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
 
         label = Gtk.Label(label="Gradient repetitions")
         # XXX DeprecationWarning: Gtk.Misc.set_alignment is deprecated
-        label.set_alignment(xalign=0.0, yalign=1.0)
+        # and I haven't found a new way that works in GTK3.
+        # label.set_alignment(xalign=0.0, yalign=1.0)
         table.attach(label, 0, 1, 2, 3,
                      xoptions=Gtk.AttachOptions.FILL, yoptions=0)
         label.show()
@@ -385,10 +387,13 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
         # autocrop_layer crops the current layer using the layer
         # passed in as its crop template -- not clear from the doc.
         self.img.active_layer = self.layer
-        Gimp.get_pdb().run_procedure('autocrop_layer', [
-            GObject.Value(Gimp.Image, self.img),
-            GObject.Value(Gimp.Drawable, self.layer)
-            ])
+        pdb = Gimp.get_pdb()
+        pdb_proc = pdb.lookup_procedure('plug-in-autocrop-layer')
+        pdb_config = pdb_proc.create_config()
+        pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
+        pdb_config.set_property('image', self.img)
+        pdb_config.set_property('drawable', self.layer)
+        result = pdb_proc.run(pdb_config)
 
         # Unreference image and layer references to try to avoid
         # gimp_plug_in_destroy_proxies: ERROR: GimpImage proxy with ID 1 was refed by plug-in, it MUST NOT do that!
