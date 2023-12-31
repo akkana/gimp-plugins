@@ -313,7 +313,8 @@ def python_wallpaper(img, layer) :
 register(
         "python_fu_wallpaper",
         "Crop and resize to make wallpaper",
-        "Crop and resize the current image according to the select, to make desktop wallpaper",
+        "Crop and resize the current image according to the selection, "
+            "to make desktop wallpaper",
         "Akkana Peck",
         "Akkana Peck",
         "2009",
