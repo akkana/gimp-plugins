@@ -23,6 +23,7 @@
 # you save the original. Or you can just overwrite your JPG if
 # all you're doing is a quick edit.
 #
+# The 
 # The basic save filename follows img.filename.
 # The copy, if any, is saved in a parasite:
 # export-scaled: filename\npercent\nwidth\nheight
@@ -54,20 +55,32 @@ def _(message): return GLib.dgettext(None, message)
 
 busy = False
 
+pdb = Gimp.get_pdb()
+
+
+def run_pdb(procname, argdict):
+    # Without this python doesn't see the pdb defined outside the function
+    global pdb
+    if not pdb:
+        pdb = Gimp.get_pdb()
+    pdb_proc = pdb.lookup_procedure(procname)
+    pdb_config = pdb_proc.create_config()
+    for argname in argdict:
+        pdb_config.set_property(argname, argdict[argname])
+    vals = pdb_proc.run(pdb_config)
+    # Convert to an iterable list
+    return [ vals.index(i) for i in range(vals.length()) ]
+
 
 def gimp_file_save(image, layers, filepath):
     """A PDB helper. Returns a Gimp.PDBStatusType"""
-
-    pdb = Gimp.get_pdb()
-    pdb_proc = pdb.lookup_procedure('gimp-file-save')
-    pdb_config = pdb_proc.create_config()
-    pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
-    pdb_config.set_property('image', image)
-    pdb_config.set_property('num-drawables', len(layers))
-    pdb_config.set_property('drawables', Gimp.ObjectArray.new(Gimp.Drawable,
-                                                              layers, False))
-    pdb_config.set_property('file', Gio.File.new_for_path(filepath))
-    return pdb_proc.run(pdb_config)
+    return run_pdb('gimp-file-save', {
+        'run-mode':      Gimp.RunMode.NONINTERACTIVE,
+        'image':         image,
+        'num-drawables': len(layers),
+        'drawables':     Gimp.ObjectArray.new(Gimp.Drawable, layers, False),
+        'file':          Gio.File.new_for_path(filepath)
+        })
 
 
 # A way to turn off notifications while we're calculating
@@ -132,7 +145,10 @@ class SaverPlugin(Gimp.PlugIn):
         '''
         msg = "Saving " + filepath
 
-        layers = image.list_selected_layers()
+        print("Save_both", filepath, copyname, copywidth, copyheight)
+
+        layers = image.list_layers()
+        print("len layers:", len(layers))
 
         def is_xcf(thefilename):
             base, ext = os.path.splitext(thefilename)
@@ -144,34 +160,40 @@ class SaverPlugin(Gimp.PlugIn):
 
         # First, save the original image.
         if is_xcf(filepath) or len(layers) < 2:
+            print(filepath, "is xcf?", is_xcf(filepath))
             mainres = gimp_file_save(image, layers, filepath)
             print("saved original to", filepath)
         else:
-            # It's not XCF and it has multiple layers.
+            # Saving to not-XCF and it has multiple layers.
             # We need to make a new image and flatten it.
-            copyimg = pdb.gimp_image_duplicate(img)
+            print("Need to make a new image")
+            # copyimg = pdb.gimp_image_duplicate(image)
+            copyimg = image.duplicate()
             # Don't actually flatten since that will prevent saving
             # transparent png.
-            #copyimg.flatten()
-            copyimage.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
-            mainres = gimp_file_save(copyimage, [copyimg.active_layer],
+            # copyimg.flatten()
+            copyimg.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
+            mainres = gimp_file_save(copyimg, copyimg.list_layers(),
                                      filepath)
-            gimp.delete(copyimg)
+
+            # Is this sufficient to delete the image from Gimp?
+            copyimg.delete()
+
             print("merged layers then saved to", filepath)
 
-        # print("result of main img gimp-file-save:", mainres, mainres.index(0))
-        if (mainres.index(0) != Gimp.PDBStatusType.SUCCESS):
-            print("gimp-file-save failed: %s" % mainres, file=sys.stderr)
-            return mainres.index(0)
+        if (mainres[0] != Gimp.PDBStatusType.SUCCESS):
+            print("gimp-file-save failed: %s" % (mainres[0]), file=sys.stderr)
+            return mainres[0]
 
         # The important part is done, so mark the image clean
         # and record the filename: set_file expects a Gio.File.
         # Sadly, image.set_file no longer works because it will only
         # accept an XCF.
-        image.set_file(Gio.File.new_for_path(filepath))
+        if is_xcf(filepath):
+            image.set_file(Gio.File.new_for_path(filepath))
+        else:
+            print("Don't know how to set export file yet")
         image.clean_all()
-
-        print("Saver: copy is %s (%dx%d)" % (copyname, copywidth, copyheight))
 
         # Now try to save the copy, if applicable
         if (not copyname or not copywidth or not copyheight or
@@ -179,7 +201,9 @@ class SaverPlugin(Gimp.PlugIn):
             or (copywidth == image.get_width()
                 and copyheight == image.get_height())):
             print("No need to save a copy")
-            return mainres
+            return mainres[0]
+
+        print("Saver: copy is %s (%dx%d)" % (copyname, copywidth, copyheight))
 
         # Set up the parasite with information about the copied image,
         # so it will be saved with the main XCF image.
@@ -225,8 +249,6 @@ class SaverPlugin(Gimp.PlugIn):
         # though it will be attached to the image and remembered in
         # this session, and the next time we save it should be remembered.
 
-        imglayers = image.list_selected_layers()
-
         # We'll need a new image if the copy is non-xcf and we have more
         # than one layer, or if we're scaling.
         if (copywidth and copyheight):
@@ -234,13 +256,13 @@ class SaverPlugin(Gimp.PlugIn):
             copyimg = image.duplicate()
             print("Scaling to", copywidth, 'x', copyheight)
             copyimg.scale(copywidth, copyheight)
-            if len(imglayers) > 1 and not is_xcf(copyname):
+            if len(layers) > 1 and not is_xcf(copyname):
                 copyimg.merge_visible_layers(copyimg, CLIP_TO_IMAGE)
                 print("Also merging")
             else:
                 print("No need to merge")
 
-        elif len(imglayers) > 1 and not is_xcf(copyname):
+        elif len(layers) > 1 and not is_xcf(copyname):
             # We're not scaling, but we still need to flatten.
             copyimg = image.duplicate()
             # copyimg.flatten()
@@ -256,9 +278,9 @@ class SaverPlugin(Gimp.PlugIn):
         copylayers = copyimg.list_selected_layers()
         print("Calling gimp_file_save for copy", copyimg, copylayers, copypath)
         copyres = gimp_file_save(copyimg, copylayers, copypath)
-        if (copyres.index(0) != Gimp.PDBStatusType.SUCCESS):
+        if (copyres[0] != Gimp.PDBStatusType.SUCCESS):
             print("Failed to save the copy")
-            return copyres.index(0)
+            return copyres[0]
 
         # Find any image type settings parasites (e.g. jpeg settings)
         # that got set during save, so we'll be able to use them
@@ -369,7 +391,7 @@ class SaverPlugin(Gimp.PlugIn):
 
             save_err = self.save_both(image, filepath,
                                       copyname, copywidth, copyheight)
-            if save_err.index(0) == Gimp.PDBStatusType.SUCCESS:
+            if save_err == Gimp.PDBStatusType.SUCCESS:
                 chooser.destroy()
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
