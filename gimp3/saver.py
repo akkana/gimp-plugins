@@ -59,7 +59,6 @@ pdb = Gimp.get_pdb()
 
 
 def run_pdb(procname, argdict):
-    # Without this python doesn't see the pdb defined outside the function
     global pdb
     if not pdb:
         pdb = Gimp.get_pdb()
@@ -77,8 +76,6 @@ def gimp_file_save(image, layers, filepath):
     return run_pdb('gimp-file-save', {
         'run-mode':      Gimp.RunMode.NONINTERACTIVE,
         'image':         image,
-        'num-drawables': len(layers),
-        'drawables':     Gimp.ObjectArray.new(Gimp.Drawable, layers, False),
         'file':          Gio.File.new_for_path(filepath)
         })
 
