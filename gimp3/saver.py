@@ -99,7 +99,7 @@ class SaverPlugin(Gimp.PlugIn):
     def do_create_procedure(self, name):
         """Register as a GIMP plug-in"""
 
-        print("do_create_procedure", name)
+        # print("do_create_procedure", name)
 
         if name == "python-fu-saver-as":
             procedure = Gimp.ImageProcedure.new(self, name,
@@ -129,22 +129,22 @@ class SaverPlugin(Gimp.PlugIn):
                 "optionally also exporting a scaled version",
             name);
         procedure.set_attribution("Akkana Peck", "Akkana Peck",
-                                  "2010,2011,2022,2023");
+                                  "2010,2011,2022,2023,2024");
 
         return procedure
 
     @staticmethod
     def save_both(image, filepath, copyname, copywidth, copyheight):
-        '''Save the image, and also save the copy if appropriate,
+        """Save the image, and also save the copy if appropriate,
            doing any duplicating or scaling that might be necessary.
            Returns None on success, else a nonempty string error message.
            Also sets the image's filename to filepath.
-        '''
+        """
         msg = "Saving " + filepath
 
         print("Save_both", filepath, copyname, copywidth, copyheight)
 
-        layers = image.list_layers()
+        layers = image.get_layers()
         print("len layers:", len(layers))
 
         def is_xcf(thefilename):
@@ -159,7 +159,8 @@ class SaverPlugin(Gimp.PlugIn):
         if is_xcf(filepath) or len(layers) < 2:
             print(filepath, "is xcf?", is_xcf(filepath))
             mainres = gimp_file_save(image, layers, filepath)
-            print("saved original to", filepath)
+            # print("saved original to", filepath)
+
         else:
             # Saving to not-XCF and it has multiple layers.
             # We need to make a new image and flatten it.
@@ -170,13 +171,12 @@ class SaverPlugin(Gimp.PlugIn):
             # transparent png.
             # copyimg.flatten()
             copyimg.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
-            mainres = gimp_file_save(copyimg, copyimg.list_layers(),
-                                     filepath)
+            mainres = gimp_file_save(copyimg, copyimg.get_layers(), filepath)
 
             # Is this sufficient to delete the image from Gimp?
             copyimg.delete()
 
-            print("merged layers then saved to", filepath)
+            # print("merged layers then saved to", filepath)
 
         if (mainres[0] != Gimp.PDBStatusType.SUCCESS):
             print("gimp-file-save failed: %s" % (mainres[0]), file=sys.stderr)
@@ -299,7 +299,7 @@ class SaverPlugin(Gimp.PlugIn):
         return None
 
     def init_from_parasite(self, img):
-        '''Returns copyname, percent, width, height.'''
+        """Returns copyname, percent, width, height."""
         para = img.get_parasite('export-copy')
         if para:
             print("Got parasite!")
@@ -325,9 +325,8 @@ class SaverPlugin(Gimp.PlugIn):
             self.export_width = img.get_width()
             self.export_height = img.get_height()
 
-    def saver(self, procedure, run_mode, image, n_drawables, drawables,
+    def saver(self, procedure, run_mode, image,  n_drawables, drawables,
               args, data):
-
         # Can't print these: "TypeError: 'ValueArray' object is not iterable"
         # print("Would run saver plug-in with:")
         # print("args:", [x for x in args])
@@ -336,8 +335,7 @@ class SaverPlugin(Gimp.PlugIn):
         if not image.get_file():    # No filename set yet
             print("No filename set! Showing dialog")
             return self.saver_as_dialog(procedure, run_mode,
-                                        image, n_drawables, drawables,
-                                        args, data)
+                                        image, args, data)
 
         filepath = image.get_file().get_path()
 
@@ -356,9 +354,11 @@ class SaverPlugin(Gimp.PlugIn):
         print("Now image.get_file() is",
               image.get_file(), image.get_file().get_path())
 
+        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
+                                           GLib.Error())
+
     def saver_as_dialog(self, procedure, run_mode, image,
-                        n_drawables, drawables,
-                        args, data):
+                        n_drawables, drawables, args, data):
 
         self.init_from_parasite(image)
 
@@ -393,6 +393,9 @@ class SaverPlugin(Gimp.PlugIn):
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
             print("SAVER looping:", save_err, file=sys.stderr)
+
+        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
+                                           GLib.Error())
 
 
 class SaverChooserWin(Gtk.FileChooserDialog):
