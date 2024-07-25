@@ -54,10 +54,10 @@ def python_arc_layer(img, layer, radius, ontop) :
 
         dstRgn = destDrawable.get_pixel_rgn(0, 0, newWidth, newHeight,
                                             True, True)
-        p_size = len(srcRgn[0,0])               
+        p_size = len(srcRgn[0,0])
         dest_pixels = array("B", "\x00" * (newWidth * newHeight * p_size))
 
-        # Finally, loop over the region:                    
+        # Finally, loop over the region:
         for x in xrange(0, srcWidth - 1) :
                 for y in xrange(0, srcHeight) :
                         # Calculate new coordinates
