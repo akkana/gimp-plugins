@@ -142,10 +142,9 @@ class SaverPlugin(Gimp.PlugIn):
         """
         msg = "Saving " + filepath
 
-        print("Save_both", filepath, copyname, copywidth, copyheight)
+        # print(f"Save_both: {filepath=}, {copyname=}, {copywidth=}, {copyheight=}")
 
         layers = image.get_layers()
-        print("len layers:", len(layers))
 
         def is_xcf(thefilename):
             base, ext = os.path.splitext(thefilename)
@@ -157,15 +156,13 @@ class SaverPlugin(Gimp.PlugIn):
 
         # First, save the original image.
         if is_xcf(filepath) or len(layers) < 2:
-            print(filepath, "is xcf?", is_xcf(filepath))
+            # print(filepath, "is xcf?", is_xcf(filepath))
             mainres = gimp_file_save(image, layers, filepath)
             # print("saved original to", filepath)
 
         else:
             # Saving to not-XCF and it has multiple layers.
             # We need to make a new image and flatten it.
-            print("Need to make a new image")
-            # copyimg = pdb.gimp_image_duplicate(image)
             copyimg = image.duplicate()
             # Don't actually flatten since that will prevent saving
             # transparent png.
@@ -194,13 +191,17 @@ class SaverPlugin(Gimp.PlugIn):
 
         # Now try to save the copy, if applicable
         if (not copyname or not copywidth or not copyheight or
-            copyname == filepath or copyname == os.path.basename(filepath)
-            or (copywidth == image.get_width()
-                and copyheight == image.get_height())):
-            print("No need to save a copy")
+            copyname == filepath or copyname == os.path.basename(filepath)):
+            # print("No need to save a copy")
             return mainres[0]
 
-        print("Saver: copy is %s (%dx%d)" % (copyname, copywidth, copyheight))
+        scaling = (copywidth != image.get_width()
+                   or copyheight != image.get_height())
+        # if scaling:
+        #     print("Saver: copy is %s (%dx%d)"
+        #           % (copyname, copywidth, copyheight))
+        # else:
+        #     print("Saving a copy of the same size to name %s" % copyname)
 
         # Set up the parasite with information about the copied image,
         # so it will be saved with the main XCF image.
@@ -216,12 +217,13 @@ class SaverPlugin(Gimp.PlugIn):
                 % (copyname, copywidth, copyheight)
         else:
             parastring = '%s\n100.0\n0\n0' % (copyname)
-        print("Saving parasite:", parastring, "(end of parastring)")
+        # print("Saving parasite:", parastring, "(end of parastring)")
         para = Gimp.Parasite.new("export-copy", 1, parastring.encode())
-        print("trying to attach parasite to main image:", para)
-        print("parasite name:", para.name)
-        print("Parasite data:", bytes(para.get_data()))
+        # print("trying to attach parasite to main image:", para)
+        # print("parasite name:", para.name)
+        # print("Parasite data:", bytes(para.get_data()))
         image.attach_parasite(para)
+        # print("Attached parasite")
 
         # Don't use gimp_message -- it can pop up a dialog.
         # pdb.gimp_message_set_handler(MESSAGE_BOX)
@@ -248,13 +250,13 @@ class SaverPlugin(Gimp.PlugIn):
 
         # We'll need a new image if the copy is non-xcf and we have more
         # than one layer, or if we're scaling.
-        if (copywidth and copyheight):
+        if scaling and copywidth and copyheight:
             # We're scaling!
             copyimg = image.duplicate()
-            print("Scaling to", copywidth, 'x', copyheight)
+            # print("Scaling to", copywidth, 'x', copyheight)
             copyimg.scale(copywidth, copyheight)
             if len(layers) > 1 and not is_xcf(copyname):
-                copyimg.merge_visible_layers(copyimg, CLIP_TO_IMAGE)
+                copyimg.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
                 print("Also merging")
             else:
                 print("No need to merge")
@@ -263,20 +265,19 @@ class SaverPlugin(Gimp.PlugIn):
             # We're not scaling, but we still need to flatten.
             copyimg = image.duplicate()
             # copyimg.flatten()
-            copyimg.merge_visible_layers(copyimg, CLIP_TO_IMAGE)
-            print("Merging but not scaling")
+            copyimg.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
+            # print("Merging but not scaling")
 
         else:
             copyimg = image
-            print("Not scaling or flattening")
+            # print("Not scaling or flattening")
 
         # gimp-file-save insists on being passed a valid layer,
         # even if saving to a multilayer format such as XCF. Go figure.
-        copylayers = copyimg.list_selected_layers()
-        print("Calling gimp_file_save for copy", copyimg, copylayers, copypath)
+        copylayers = copyimg.get_selected_layers()
         copyres = gimp_file_save(copyimg, copylayers, copypath)
         if (copyres[0] != Gimp.PDBStatusType.SUCCESS):
-            print("Failed to save the copy")
+            print("Failed to save the copy:", copyres)
             return copyres[0]
 
         # Find any image type settings parasites (e.g. jpeg settings)
@@ -284,7 +285,7 @@ class SaverPlugin(Gimp.PlugIn):
         # next time.
         def copy_settings_parasites(fromimg, toimg):
             if fromimg == toimg:
-                print("Same image, not copying")
+                # print("Same image, not copying")
                 return
             for pname in fromimg.get_parasite_list():
                 if pname[-9:] == '-settings' or pname[-13:] == '-save-options':
@@ -295,31 +296,31 @@ class SaverPlugin(Gimp.PlugIn):
         # Copy any settings parasites we may have saved from previous runs:
         copy_settings_parasites(copyimg, image)
 
-        gimp.delete(copyimg)
+        # Gimp.delete(copyimg)
+        copyimg.delete()
         return None
 
     def init_from_parasite(self, img):
         """Returns copyname, percent, width, height."""
         para = img.get_parasite('export-copy')
         if para:
-            print("Got parasite!")
             try:
                 data = bytes(para.get_data()).decode()
-                print("Parasite data:", data)
+                # print("Parasite data:", data)
                 paravals = [ 0 if x == 'None' or x == '' else x
                              for x in data.split('\n') ]
                 self.copyname = paravals[0]
                 self.export_percent = float(paravals[1])
                 self.export_width = int(paravals[2])
                 self.export_height = int(paravals[3])
-                print("Read parasite values",
-                      self.copyname, self.export_percent,
-                      self.export_width, self.export_height)
+                # print("Read parasite values",
+                #       self.copyname, self.export_percent,
+                #       self.export_width, self.export_height)
             except Exception as e:
                 print("Exception getting parasite values:", e)
                 para = None
         if not para:
-            print("No parasite")
+            # print("No parasite")
             self.copyname = None
             self.export_percent = 100.0
             self.export_width = img.get_width()
@@ -333,7 +334,7 @@ class SaverPlugin(Gimp.PlugIn):
         # print("data:", [x for x in data])
 
         if not image.get_file():    # No filename set yet
-            print("No filename set! Showing dialog")
+            # print("No filename set! Showing dialog")
             return self.saver_as_dialog(procedure, run_mode,
                                         image, args, data)
 
@@ -342,15 +343,20 @@ class SaverPlugin(Gimp.PlugIn):
         # Now see if there's a parasite with copyimg info
         self.init_from_parasite(image)
 
-        if self.copyname:
-            print("Image has parasite data: copyname is", self.copyname,
-                  "at", self.export_width, "x", self.export_height)
-        print("Image's file is:", image.get_file().get_path())
+        # if self.copyname:
+        #     print("Image has parasite data: copyname is", self.copyname,
+        #           "at", self.export_width, "x", self.export_height)
+        # print("Image's file is:", image.get_file().get_path())
 
-        save_err = self.save_both(image, filepath,
-                                  self.copyname,
-                                  self.export_width, self.export_height)
-        print("save_both returned", save_err)
+        save_status = self.save_both(image, filepath,
+                                     self.copyname,
+                                     self.export_width, self.export_height)
+        if save_status:
+            print("save_both returned an error:", save_err)
+            return procedure.new_return_values(
+                Gimp.PDBStatusType.EXECUTION_ERROR,
+                GLib.Error(save_status))
+
         print("Now image.get_file() is",
               image.get_file(), image.get_file().get_path())
 
@@ -386,16 +392,13 @@ class SaverPlugin(Gimp.PlugIn):
             filepath = chooser.get_filename()
             copyname, percent, copywidth, copyheight = chooser.get_copy_info()
 
-            save_err = self.save_both(image, filepath,
-                                      copyname, copywidth, copyheight)
-            if save_err == Gimp.PDBStatusType.SUCCESS:
+            save_status = self.save_both(image, filepath,
+                                         copyname, copywidth, copyheight)
+            if not save_status:    # success
                 chooser.destroy()
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
-            print("SAVER looping:", save_err, file=sys.stderr)
-
-        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
-                                           GLib.Error())
+            print("saver-as looping:", save_err, file=sys.stderr)
 
 
 class SaverChooserWin(Gtk.FileChooserDialog):
@@ -421,11 +424,10 @@ class SaverChooserWin(Gtk.FileChooserDialog):
         imagefile = image.get_file()
         if imagefile:
             path = image.get_file().get_path()
-            print("Existing path:", path)
             self.set_current_folder(os.path.dirname(path))
             self.set_filename(path)
-        else:
-            print("saver: image doesn't have a filename yet")
+        # else:
+        #     print("saver: image doesn't have a filename yet")
 
         # filter = Gtk.FileFilter()
         # filter.set_name(_("All files (*)"))
