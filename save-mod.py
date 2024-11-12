@@ -1,12 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-# Save or export the current image -- do the right thing whether it's
-# XCF (save) or any other format (export). This will mark the image clean,
-# so GIMP won't warn you when you exit.
-# Warning: this does not show a lot of extra dialogs, etc. or warn you
-# if you're about to overwrite something! Use with caution.
-
-# Copyright 2012 by Akkana Peck, http://www.shallowsky.com/software/
+# Copyright 2013 by Michael Schönitzer, Akkana Peck
 # You may use and distribute this plug-in under the terms of the GPL v2
 # or, at your option, any later GPL version.
 
@@ -14,9 +9,12 @@ from gimpfu import *
 import gtk
 import os
 import collections
+import re
 
-def python_export_clean(img, drawable) :
+def python_savemod_clean(img, drawable) :
     filename = img.filename
+    
+    # If the file has no filename yet, ask user
     if not filename :
         chooser = gtk.FileChooserDialog(title=None,
                                         action=gtk.FILE_CHOOSER_ACTION_SAVE,
@@ -28,26 +26,44 @@ def python_export_clean(img, drawable) :
         save_dir = choose_likely_save_dir()
         if save_dir :
             chooser.set_current_folder(save_dir)
-
-        # Oh, cool, we could have shortcuts to image folders,
-        # and maybe remove the stupid fstab shortcuts GTK adds for us.
-        #chooser.add_shortcut_folder(folder)
-        #chooser.remove_shortcut_folder(folder)
-
+        
         response = chooser.run()
         if response != gtk.RESPONSE_OK:
             return
-
+        
         filename = chooser.get_filename()
         img.filename = filename
         chooser.destroy()
-
+    # Otherwise we appand a string to the filename 
+    else:
+        # We don't want to save it in xcf format
+        if os.path.splitext(filename)[1] == ".xcf" :
+           filename = os.path.splitext(filename)[0] + ".png"
+        
+        filenamewoext = os.path.splitext(filename)[0] # filename without extension
+        filenameext = os.path.splitext(filename)[1] # filenameextension
+        # ToDo: Improve, so that mor than 9 versions are possible
+        # Add -mod-attachement to filename
+        if not re.search('-mod[0-9]?$' , filenamewoext):
+           filename = filenamewoext + "-mod" + filenameext
+        elif re.search('-mod$' , filenamewoext):
+           filename = filenamewoext + "2" + filenameext
+        # Increment number of the -mod-attachement
+        else:
+           num = int(filenamewoext[-1]) + 1
+           filename = filenamewoext[0:-1] + str(num) + filenameext
+    
+    # We want to save all layers,
+    # so first duplicate the picture, then merge all layers
     exportimg = pdb.gimp_image_duplicate(img)
     layer = pdb.gimp_image_merge_visible_layers(exportimg, CLIP_TO_IMAGE)
     
+    # save file and unset the 'unsaved'-flag
     pdb.gimp_file_save(exportimg, layer, filename, filename)
     pdb.gimp_image_clean_all(img)
+    img.filename = filename
 
+# Guess the save directory
 def choose_likely_save_dir() :
     counts = collections.Counter()
     for img in gimp.image_list() :
@@ -60,20 +76,20 @@ def choose_likely_save_dir() :
         return None
 
 register(
-        "python_fu_export_clean",
-        "Save or export the current image, then mark it clean.",
-        "Save or export the current image, then mark it clean.",
-        "Akkana Peck",
-        "Akkana Peck",
-        "2012",
-        "Save/Export clean",
+        "python_fu_savemod_clean",
+        "Save current image with mod extension, then mark it clean.",
+        "Save current image with mod extension, then mark it clean.",
+        "Michael Schoenitzer, Akkana Peck",
+        "Michael Schoenitzer, Akkana Peck",
+        "2013",
+        "Save with -mod & clean",
         "*",
         [
             (PF_IMAGE, "image", "Input image", None),
             (PF_DRAWABLE, "drawable", "Input drawable", None),
         ],
         [],
-        python_export_clean,
+        python_savemod_clean,
         menu = "<Image>/File/Save/"
 )
 
