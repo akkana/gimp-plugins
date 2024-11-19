@@ -19,28 +19,29 @@ gi.require_version('Gimp', '3.0')
 from gi.repository import Gimp
 gi.require_version('GimpUi', '3.0')
 from gi.repository import GimpUi
+from gi.repository import Gegl
+# from gi.repository import Babl
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
 import time
 import sys
 
+from gimphelpers import pdb_run
+
 def N_(message): return message
 def _(message): return GLib.dgettext(None, message)
 
 
-def blobipy(procedure, run_mode, image, n_drawables, drawables, args, data):
-    config = procedure.create_config()
-    config.begin_run(image, run_mode, args)
-
+def blobipy(procedure, run_mode, image, drawables, config, data):
     if run_mode == Gimp.RunMode.INTERACTIVE:
         GimpUi.init('python-fu-blobipy')
         dialog = GimpUi.ProcedureDialog(procedure=procedure, config=config)
         dialog.fill(None)
         if not dialog.run():
             dialog.destroy()
-            config.end_run(Gimp.PDBStatusType.CANCEL)
-            return procedure.new_return_values(Gimp.PDBStatusType.CANCEL, GLib.Error())
+            return procedure.new_return_values(Gimp.PDBStatusType.CANCEL,
+                                               GLib.Error())
         else:
             dialog.destroy()
 
@@ -54,39 +55,36 @@ def blobipy(procedure, run_mode, image, n_drawables, drawables, args, data):
     # is deprecated and replaced by gimp-image-select-item.
     # The arguments are image (GimpImage), operation (GimpChannelOps)
     # and item (GimpItem).
-    Gimp.get_pdb().run_procedure('gimp-image-select-item', [
-        GObject.Value(Gimp.Image, image),
-        # Gimp.ChannelOps.REPLACE is an enum
-        GObject.Value(GObject.TYPE_INT, Gimp.ChannelOps.REPLACE),
-        GObject.Value(Gimp.Drawable, drawables[0])
-    ])
+    pdb_run('gimp-image-select-item', {
+        'image': image,
+        'operation': Gimp.ChannelOps.REPLACE,
+        'item': drawables[0]
+        })
 
     # Invert the selection:
-    Gimp.get_pdb().run_procedure('gimp-selection-invert', [
-        GObject.Value(Gimp.Image, image),
-    ])
+    pdb_run('gimp-selection-invert', {
+        'image': image
+    })
 
-    # Make a dropshadow from the inverted selection
-    Gimp.get_pdb().run_procedure('script-fu-drop-shadow', [
-        GObject.Value(Gimp.RunMode, Gimp.RunMode.NONINTERACTIVE),
-        GObject.Value(Gimp.Image, image),
-        GObject.Value(Gimp.Drawable, drawables[0]),
-        GObject.Value(GObject.TYPE_INT, -3),      # offset X
-        GObject.Value(GObject.TYPE_INT, -3),      # offset Y
-        GObject.Value(GObject.TYPE_INT, blur),    # blur in pixels
-        # Should color be cast into some GObject type? What type?
-        # There is no GObject.TYPE_COLOR
-        color,
-        GObject.Value(GObject.TYPE_INT, 80), # opacity
-        GObject.Value(GObject.TYPE_BOOLEAN, False) # allow resizing
-    ])
+    # Make a dropshadow from the inverted selection.
+    # I hope these parameter labels change to real names instead of types.
+    pdb_run('script-fu-drop-shadow', {
+        'run-mode': Gimp.RunMode.NONINTERACTIVE,
+        'image': image,
+        'drawables': drawables,  # cast to Gimp.ObjectArray by gimphelpers
+        'adjustment': -3,        # offset X
+        'adjustment-2': -3,      # offset Y
+        'adjustment-3': blur,
+        'color': color,
+        'adjustment-4': 80,      # opacity
+        'toggle': False,         # allow resizing
+        })
 
     # Finish and clean up
     Gimp.Selection.none(image)
+    Gimp.displays_flush()
     image.undo_group_end()
     Gimp.context_pop()
-
-    config.end_run(Gimp.PDBStatusType.SUCCESS)
 
     return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
 
@@ -111,11 +109,10 @@ class BlobiPy(Gimp.PlugIn):
     def do_create_procedure(self, name):
         # Workaround copied from foggify.py until GIMP can handle color args
         # in the regular __gproperties__ list
-        black = Gimp.RGB()
-        black.set(0, 0, 0)
-        color = GObject.Property(type =Gimp.RGB, default=black,
-                                 nick =_("_Shadow color"),
-                                 blurb=_("Shadow color"))
+        Gegl.init(None)
+
+        black = Gegl.Color.new("black")
+        black.set_rgba(0, 0, 0, 1)
 
         procedure = Gimp.ImageProcedure.new(self, name,
                                             Gimp.PDBProcType.PLUGIN,
@@ -128,11 +125,15 @@ class BlobiPy(Gimp.PlugIn):
                                       "using an inverse drop-shadow."),
                                     name)
         procedure.set_menu_label(_("_BlobiPy..."))
-        procedure.set_attribution("Akkana Peck", "Akkana Peck", "2009,2022")
+        procedure.set_attribution("Akkana Peck", "Akkana Peck", "2009,2022,2024")
         procedure.add_menu_path ("<Image>/Filters/Light and Shadow")
 
-        procedure.add_argument_from_property(self, "blur")
-        procedure.add_argument_from_property(self, "color")
+        procedure.add_double_argument("blur", _("_Blur"), _("Blur"),
+                                       0.0, 50.0, 7.0,
+                                      GObject.ParamFlags.READWRITE)
+        procedure.add_color_argument ("color",
+                                      _("Shado_w color"), _("Shadow color"),
+                                      True, black, GObject.ParamFlags.READWRITE)
         return procedure
 
 
