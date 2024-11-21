@@ -107,12 +107,12 @@ class SaverPlugin(Gimp.PlugIn):
         return True, 'gimp30-python', None
 
     def do_query_procedures(self):
+        print("do_query_procedures", file=sys.stderr)
         return [ "python-fu-saver", "python-fu-saver-as" ]
 
     def do_create_procedure(self, name):
         """Register as a GIMP plug-in"""
-
-        # print("do_create_procedure", name)
+        print("Registering", name, file=sys.stderr)
 
         if name == "python-fu-saver-as":
             procedure = Gimp.ImageProcedure.new(self, name,
@@ -344,17 +344,10 @@ class SaverPlugin(Gimp.PlugIn):
             self.export_width = img.get_width()
             self.export_height = img.get_height()
 
-    def saver(self, procedure, run_mode, image,  drawables,
-              args, data):
-        # Can't print these: "TypeError: 'ValueArray' object is not iterable"
-        # print("Would run saver plug-in with:")
-        # print("args:", [x for x in args])
-        # print("data:", [x for x in data])
-
+    def saver(self, procedure, run_mode, image,  drawables, config, data):
         if not image.get_file():    # No filename set yet
-            # print("No filename set! Showing dialog")
-            return self.saver_as_dialog(procedure, run_mode,
-                                        image, args, data)
+            return self.saver_as_dialog(procedure, run_mode, image, drawables,
+                                        config, data)
 
         filepath = image.get_file().get_path()
 
@@ -374,22 +367,14 @@ class SaverPlugin(Gimp.PlugIn):
             return procedure.new_return_values(
                 Gimp.PDBStatusType.EXECUTION_ERROR,
                 GLib.Error(save_status))
-        # return procedure.new_return_values(result.index(0), GLib.Error(result.index(1)))
-
-        print("Now image.get_file() is",
-              image.get_file(), image.get_file().get_path())
 
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                            GLib.Error())
 
     def saver_as_dialog(self, procedure, run_mode, image,
-                        drawables, args, data):
+                        drawables, config, data):
 
         self.init_from_parasite(image)
-
-        # Are the next two lines needed if we don't fetch any properties?
-        # config = procedure.create_config()
-        # config.begin_run(image, run_mode, args)
 
         if run_mode != Gimp.RunMode.INTERACTIVE:
             print("EEK, 'saver as' but not interactive?")
