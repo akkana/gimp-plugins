@@ -58,26 +58,39 @@ busy = False
 pdb = Gimp.get_pdb()
 
 
-def run_pdb(procname, argdict):
-    global pdb
-    if not pdb:
-        pdb = Gimp.get_pdb()
-    pdb_proc = pdb.lookup_procedure(procname)
+# This is from gimphelpers.py, but duplicated here so people can
+# use saver without needing an extra file.
+def run_pdb(name, argdic):
+    """Run something from the GIMP PDB.
+       args should be a dictionary of the properties for the given PDB proc.
+       Returns a GimpValueArray, of which .index(0) is a Gimp.PDBStatusType.
+       On error, .index(1) is the error message as a string,
+       but there are other ways of getting that.
+    """
+    pdb_proc = Gimp.get_pdb().lookup_procedure(name)
     pdb_config = pdb_proc.create_config()
-    for argname in argdict:
-        pdb_config.set_property(argname, argdict[argname])
-    vals = pdb_proc.run(pdb_config)
-    # Convert to an iterable list
-    return [ vals.index(i) for i in range(vals.length()) ]
+    for key in argdic:
+        if type(argdic[key]) is list:
+            pdb_config.set_core_object_array(key, argdic[key])
+        else:
+            pdb_config.set_property(key, argdic[key])
+
+    return pdb_proc.run(pdb_config)
+
 
 
 def gimp_file_save(image, layers, filepath):
     """A PDB helper. Returns a Gimp.PDBStatusType"""
-    return run_pdb('gimp-file-save', {
+    pdb_return = run_pdb('gimp-file-save', {
         'run-mode':      Gimp.RunMode.NONINTERACTIVE,
         'image':         image,
         'file':          Gio.File.new_for_path(filepath)
         })
+    # print("pdb run returned", pdb_return, "of type", type(pdb_return),
+    #       "and length", pdb_return.length(), file=sys.stderr)
+    # if pdb_return.length() > 1:
+    #     print("  1:", pdb_return.index(1), file=sys.stderr)
+    return pdb_return.index(0)
 
 
 # A way to turn off notifications while we're calculating
@@ -175,9 +188,13 @@ class SaverPlugin(Gimp.PlugIn):
 
             # print("merged layers then saved to", filepath)
 
-        if (mainres[0] != Gimp.PDBStatusType.SUCCESS):
-            print("gimp-file-save failed: %s" % (mainres[0]), file=sys.stderr)
-            return mainres[0]
+        # XXX pdb_proc.run(pdb_config) (called by gimp_file_save)
+        # returns a Gimp.ValueArray of length 1,
+        # but I haven't found any way to get to the values inside it
+        # to find out whether the call succceeded or not.
+        if (mainres != Gimp.PDBStatusType.SUCCESS):
+            print("gimp-file-save failed: %s" % mainres, file=sys.stderr)
+            return mainres
 
         # The important part is done, so mark the image clean
         # and record the filename: set_file expects a Gio.File.
@@ -186,14 +203,14 @@ class SaverPlugin(Gimp.PlugIn):
         if is_xcf(filepath):
             image.set_file(Gio.File.new_for_path(filepath))
         else:
-            print("Don't know how to set export file yet")
+            print("Saver: Don't know how to set export file yet")
         image.clean_all()
 
         # Now try to save the copy, if applicable
         if (not copyname or not copywidth or not copyheight or
             copyname == filepath or copyname == os.path.basename(filepath)):
             # print("No need to save a copy")
-            return mainres[0]
+            return mainres
 
         scaling = (copywidth != image.get_width()
                    or copyheight != image.get_height())
@@ -257,9 +274,9 @@ class SaverPlugin(Gimp.PlugIn):
             copyimg.scale(copywidth, copyheight)
             if len(layers) > 1 and not is_xcf(copyname):
                 copyimg.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
-                print("Also merging")
-            else:
-                print("No need to merge")
+                # print("Also merging")
+            # else:
+            #     print("Saver: No need to merge")
 
         elif len(layers) > 1 and not is_xcf(copyname):
             # We're not scaling, but we still need to flatten.
@@ -276,9 +293,9 @@ class SaverPlugin(Gimp.PlugIn):
         # even if saving to a multilayer format such as XCF. Go figure.
         copylayers = copyimg.get_selected_layers()
         copyres = gimp_file_save(copyimg, copylayers, copypath)
-        if (copyres[0] != Gimp.PDBStatusType.SUCCESS):
+        if (copyres != Gimp.PDBStatusType.SUCCESS):
             print("Failed to save the copy:", copyres)
-            return copyres[0]
+            return copyres
 
         # Find any image type settings parasites (e.g. jpeg settings)
         # that got set during save, so we'll be able to use them
@@ -291,14 +308,15 @@ class SaverPlugin(Gimp.PlugIn):
                 if pname[-9:] == '-settings' or pname[-13:] == '-save-options':
                     para = fromimg.get_parasite(pname)
                     if para:
-                        toimg.attach_parasite(pname, para.flags, para.data)
+                        toimg.attach_parasite(para)
+                        # toimg.attach_parasite(pname, para.flags, para.data)
 
         # Copy any settings parasites we may have saved from previous runs:
         copy_settings_parasites(copyimg, image)
 
         # Gimp.delete(copyimg)
         copyimg.delete()
-        return None
+        return copyres
 
     def init_from_parasite(self, img):
         """Returns copyname, percent, width, height."""
@@ -326,7 +344,7 @@ class SaverPlugin(Gimp.PlugIn):
             self.export_width = img.get_width()
             self.export_height = img.get_height()
 
-    def saver(self, procedure, run_mode, image,  n_drawables, drawables,
+    def saver(self, procedure, run_mode, image,  drawables,
               args, data):
         # Can't print these: "TypeError: 'ValueArray' object is not iterable"
         # print("Would run saver plug-in with:")
@@ -351,11 +369,12 @@ class SaverPlugin(Gimp.PlugIn):
         save_status = self.save_both(image, filepath,
                                      self.copyname,
                                      self.export_width, self.export_height)
-        if save_status:
-            print("save_both returned an error:", save_err)
+        if save_status != Gimp.PDBStatusType.SUCCESS:
+            print("save_both returned an error:", save_status, file=sys.stderr)
             return procedure.new_return_values(
                 Gimp.PDBStatusType.EXECUTION_ERROR,
                 GLib.Error(save_status))
+        # return procedure.new_return_values(result.index(0), GLib.Error(result.index(1)))
 
         print("Now image.get_file() is",
               image.get_file(), image.get_file().get_path())
@@ -364,7 +383,7 @@ class SaverPlugin(Gimp.PlugIn):
                                            GLib.Error())
 
     def saver_as_dialog(self, procedure, run_mode, image,
-                        n_drawables, drawables, args, data):
+                        drawables, args, data):
 
         self.init_from_parasite(image)
 
@@ -394,11 +413,11 @@ class SaverPlugin(Gimp.PlugIn):
 
             save_status = self.save_both(image, filepath,
                                          copyname, copywidth, copyheight)
-            if not save_status:    # success
+            if save_status == Gimp.PDBStatusType.SUCCESS:    # success
                 chooser.destroy()
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
-            print("saver-as looping:", save_err, file=sys.stderr)
+            # print("saver-as looping:", save_err, file=sys.stderr)
 
 
 class SaverChooserWin(Gtk.FileChooserDialog):
