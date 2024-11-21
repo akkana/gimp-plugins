@@ -55,42 +55,13 @@ def _(message): return GLib.dgettext(None, message)
 
 busy = False
 
-pdb = Gimp.get_pdb()
-
-
-# This is from gimphelpers.py, but duplicated here so people can
-# use saver without needing an extra file.
-def run_pdb(name, argdic):
-    """Run something from the GIMP PDB.
-       args should be a dictionary of the properties for the given PDB proc.
-       Returns a GimpValueArray, of which .index(0) is a Gimp.PDBStatusType.
-       On error, .index(1) is the error message as a string,
-       but there are other ways of getting that.
-    """
-    pdb_proc = Gimp.get_pdb().lookup_procedure(name)
-    pdb_config = pdb_proc.create_config()
-    for key in argdic:
-        if type(argdic[key]) is list:
-            pdb_config.set_core_object_array(key, argdic[key])
-        else:
-            pdb_config.set_property(key, argdic[key])
-
-    return pdb_proc.run(pdb_config)
-
-
 
 def gimp_file_save(image, layers, filepath):
-    """A PDB helper. Returns a Gimp.PDBStatusType"""
-    pdb_return = run_pdb('gimp-file-save', {
-        'run-mode':      Gimp.RunMode.NONINTERACTIVE,
-        'image':         image,
-        'file':          Gio.File.new_for_path(filepath)
-        })
-    # print("pdb run returned", pdb_return, "of type", type(pdb_return),
-    #       "and length", pdb_return.length(), file=sys.stderr)
-    # if pdb_return.length() > 1:
-    #     print("  1:", pdb_return.index(1), file=sys.stderr)
-    return pdb_return.index(0)
+    """A PDB helper. Returns a Gimp.PDBStatusType
+       Returns True on success.
+    """
+    return Gimp.file_save(run_mode=Gimp.RunMode.NONINTERACTIVE, image=image,
+                          file=Gio.File.new_for_path(filepath), options=None)
 
 
 # A way to turn off notifications while we're calculating
@@ -107,13 +78,10 @@ class SaverPlugin(Gimp.PlugIn):
         return True, 'gimp30-python', None
 
     def do_query_procedures(self):
-        print("do_query_procedures", file=sys.stderr)
         return [ "python-fu-saver", "python-fu-saver-as" ]
 
     def do_create_procedure(self, name):
         """Register as a GIMP plug-in"""
-        print("Registering", name, file=sys.stderr)
-
         if name == "python-fu-saver-as":
             procedure = Gimp.ImageProcedure.new(self, name,
                                                 Gimp.PDBProcType.PLUGIN,
@@ -188,13 +156,9 @@ class SaverPlugin(Gimp.PlugIn):
 
             # print("merged layers then saved to", filepath)
 
-        # XXX pdb_proc.run(pdb_config) (called by gimp_file_save)
-        # returns a Gimp.ValueArray of length 1,
-        # but I haven't found any way to get to the values inside it
-        # to find out whether the call succceeded or not.
-        if (mainres != Gimp.PDBStatusType.SUCCESS):
-            print("gimp-file-save failed: %s" % mainres, file=sys.stderr)
-            return mainres
+        if not mainres:
+            print("main file_save failed", file=sys.stderr)
+            return "main file_save failed"
 
         # The important part is done, so mark the image clean
         # and record the filename: set_file expects a Gio.File.
@@ -204,13 +168,14 @@ class SaverPlugin(Gimp.PlugIn):
             image.set_file(Gio.File.new_for_path(filepath))
         else:
             print("Saver: Don't know how to set export file yet")
+
         image.clean_all()
 
         # Now try to save the copy, if applicable
         if (not copyname or not copywidth or not copyheight or
             copyname == filepath or copyname == os.path.basename(filepath)):
             # print("No need to save a copy")
-            return mainres
+            return None
 
         scaling = (copywidth != image.get_width()
                    or copyheight != image.get_height())
@@ -293,9 +258,9 @@ class SaverPlugin(Gimp.PlugIn):
         # even if saving to a multilayer format such as XCF. Go figure.
         copylayers = copyimg.get_selected_layers()
         copyres = gimp_file_save(copyimg, copylayers, copypath)
-        if (copyres != Gimp.PDBStatusType.SUCCESS):
-            print("Failed to save the copy:", copyres)
-            return copyres
+        if not copyres:
+            print("Failed to save the copy")
+            return "Failed to save the copy"
 
         # Find any image type settings parasites (e.g. jpeg settings)
         # that got set during save, so we'll be able to use them
@@ -316,7 +281,7 @@ class SaverPlugin(Gimp.PlugIn):
 
         # Gimp.delete(copyimg)
         copyimg.delete()
-        return copyres
+        return None
 
     def init_from_parasite(self, img):
         """Returns copyname, percent, width, height."""
@@ -362,11 +327,11 @@ class SaverPlugin(Gimp.PlugIn):
         save_status = self.save_both(image, filepath,
                                      self.copyname,
                                      self.export_width, self.export_height)
-        if save_status != Gimp.PDBStatusType.SUCCESS:
+        # if save_status != Gimp.PDBStatusType.SUCCESS:
+        if save_status:
             print("save_both returned an error:", save_status, file=sys.stderr)
             return procedure.new_return_values(
-                Gimp.PDBStatusType.EXECUTION_ERROR,
-                GLib.Error(save_status))
+                Gimp.PDBStatusType.EXECUTION_ERROR, GLib.Error())
 
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                            GLib.Error())
@@ -396,13 +361,18 @@ class SaverPlugin(Gimp.PlugIn):
             filepath = chooser.get_filename()
             copyname, percent, copywidth, copyheight = chooser.get_copy_info()
 
-            save_status = self.save_both(image, filepath,
-                                         copyname, copywidth, copyheight)
-            if save_status == Gimp.PDBStatusType.SUCCESS:    # success
+            save_err = self.save_both(image, filepath,
+                                      copyname, copywidth, copyheight)
+            # Did it succeed?
+            if not save_err:
                 chooser.destroy()
                 return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
                                                    GLib.Error())
-            # print("saver-as looping:", save_err, file=sys.stderr)
+            # If save_both returned an error string, the real error
+            # has magically already been presented to the user, and
+            # doesn't need to be handled here.
+            # Whatever error string save_both returned will be ignored.
+            print("save_both failed:", save_err, file=sys.stderr)
 
 
 class SaverChooserWin(Gtk.FileChooserDialog):
@@ -423,7 +393,7 @@ class SaverChooserWin(Gtk.FileChooserDialog):
         # https://docs.gtk.org/gtk3/class.FileChooserDialog.html
 
         # Obey the window manager quit signal:
-        self.connect("destroy", Gtk.main_quit)
+        # self.connect("destroy", Gtk.main_quit)
 
         imagefile = image.get_file()
         if imagefile:
