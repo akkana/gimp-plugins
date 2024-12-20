@@ -4,9 +4,9 @@
 # Draw arrows in GIMP, using the selection as a guide for where to draw.
 # Updated for GIMP 3.0+ API.
 #
-# Copyright 2010,2011,2020,2022 by Akkana, http://www.shallowsky.com/software/
+# Copyright 2010,2011,2020,2022,2024 by Akkana, http://www.shallowsky.com/software/
 # plus contributions from Robert Brizard.
-# You may use and distribute this plug-in under the terms of the GPL.
+# Share and enjoythis plug-in under the terms of the GPL v2 or later.
 
 # GIMP 3 API: Still one problem left to figure out:
 # gimp_plug_in_destroy_proxies: ERROR: GimpImage proxy with ID 1 was refed by plug-in, it MUST NOT do that!
@@ -36,28 +36,17 @@ import sys, os
 DIREC_N, DIREC_NE, DIREC_E, DIREC_SE, DIREC_S, DIREC_SW, DIREC_W, DIREC_NW \
     = range(8)
 
+# Which index corresponds to which direction name?
+DirectionNames = [ "N", "NE", "E", "SE", "S", "SW", "W", "NW" ]
+
+def N_(message): return message
+def _(message): return GLib.dgettext(None, message)
+
 
 class ArrowDesigner (Gimp.PlugIn):
-    ## Parameters ##
-    __gproperties__ = {
-        "angle": (int,
-                  "Angle",
-                  "Arrowhead Angle",
-                  0, 360, 40,
-                  GObject.ParamFlags.READWRITE),
-        "size": (int,
-                 "Size",
-                 "Arrowhead Size",
-                 0, 80, 25,
-                 GObject.ParamFlags.READWRITE),
-        "direction": (int,
-                      "Direction",
-                      "Direction",
-                      0, 8, 0,
-                      GObject.ParamFlags.READWRITE),
-    }
-
     ## GimpPlugIn virtual methods ##
+
+    # GIMP 3.0 requires that every plugin define the exact same function:
     def do_set_i18n(self, procname):
         return True, 'gimp30-python', None
 
@@ -77,9 +66,18 @@ class ArrowDesigner (Gimp.PlugIn):
         procedure.add_menu_path('<Image>/Filters/Render/');
 
         # Add parameters
-        procedure.add_argument_from_property(self, "angle")
-        procedure.add_argument_from_property(self, "size")
-        procedure.add_argument_from_property(self, "direction")
+        procedure.add_int_argument("angle", _("A_ngle"),
+                                   _("Angle of the arrowhead"),
+                                   25, 80, 35,
+                                   GObject.ParamFlags.READWRITE)
+        procedure.add_int_argument("size", _("S_ize"),
+                                   _("Arrowhead size (pixels)"),
+                                   1, 200, 30,
+                                   GObject.ParamFlags.READWRITE)
+        procedure.add_int_argument("direction", _("D_irection"),
+                                   _("Direction the arrow points"),
+                                   0, 8, 0,
+                                   GObject.ParamFlags.READWRITE)
 
         procedure.set_documentation(
             "Draw an arrow based on the selection",
@@ -87,11 +85,11 @@ class ArrowDesigner (Gimp.PlugIn):
             "updating interactively as the selection changes",
             name);
         procedure.set_attribution("Akkana Peck", "Akkana Peck",
-                                  "2010,2011,2022,2023");
+                                  "2010,2011,2022,2023,2024");
 
         return procedure
 
-    def show_arrowdesigner(self, procedure, run_mode, image, n_layers, layers,
+    def show_arrowdesigner(self, procedure, run_mode, image, layers,
                            config, data):
         angle = config.get_property("angle")
         size = config.get_property("size")
@@ -99,8 +97,7 @@ class ArrowDesigner (Gimp.PlugIn):
 
         if run_mode == Gimp.RunMode.INTERACTIVE:
             GimpUi.init("arrowdesigner")
-
-            r = ArrowWindow(image, angle, size, direction)
+            r = ArrowWindow(image, config, angle, size, direction)
             Gtk.main()
         else:
             print("Non-interactive arrow designer, I'm not sure what to do!",
@@ -212,8 +209,10 @@ def direc_to_coords(x1, y1, x2, y2, direction):
 
 
 class ArrowWindow(Gtk.Window):
-    def __init__ (self, img, angle, size, direction):
+    def __init__ (self, img, config, angle, size, direction):
         self.img = img
+        self.config = config
+
         self.x1, self.y1, self.x2, self.y2 = 0, 0, 0, 0
 
         self.arrowangle = angle
@@ -323,39 +322,18 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
         # Selector for arrow direction
         hbox = Gtk.HBox(spacing=5)
 
-        btn = Gtk.RadioButton(group=None, label="N")
-        btn.set_active(True)
-        btn.connect("toggled", self.direction_cb, DIREC_N)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="NE")
-        btn.connect("toggled", self.direction_cb, DIREC_NE)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="E")
-        btn.connect("toggled", self.direction_cb, DIREC_E)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="SE")
-        btn.connect("toggled", self.direction_cb, DIREC_SE)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="S")
-        btn.connect("toggled", self.direction_cb, DIREC_S)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="SW")
-        btn.connect("toggled", self.direction_cb, DIREC_SW)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="W")
-        btn.connect("toggled", self.direction_cb, DIREC_W)
-        hbox.add(btn)
-        btn.show()
-        btn = Gtk.RadioButton(group=btn, label="NW")
-        btn.connect("toggled", self.direction_cb, DIREC_NW)
-        hbox.add(btn)
-        btn.show()
+        # GTK's weirdo radiobuttons: group=None for the first button
+        # in a group, and for the rest, group=firstbutton.
+        group = None
+        for direc_index, direc_name in enumerate(DirectionNames):
+            btn = Gtk.RadioButton(group=group, label=direc_name)
+            if not group:
+                group = btn
+            if direc_index == self.direction:
+                btn.set_active(True)
+            btn.connect("toggled", self.direction_cb, direc_index)
+            hbox.add(btn)
+            btn.show()
 
         vbox.add(hbox)
         hbox.show()
@@ -393,6 +371,7 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
         pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
         pdb_config.set_property('image', self.img)
         pdb_config.set_property('drawable', self.layer)
+
         result = pdb_proc.run(pdb_config)
 
         # Unreference image and layer references to try to avoid
@@ -403,7 +382,10 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
 
         Gtk.main_quit()
 
-    def direction_cb(self, widget, data=None) :
+    def direction_cb(self, btn, data=None) :
+        # This gets called for both the old button and the new one
+        if not btn.get_active():
+            return
         self.direction = data
         self.changed = True
 
@@ -425,6 +407,9 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
                                        x1, y1, x2, y2, self.num_grad)
 
     def update(self, *args):
+        """Called from poll, in case the selection might have changed.
+           Eventually GIMP 3.x might add notifications for selection change.
+        """
         # print("Update")
         # sys.stdout.flush()
         # The docs don't say what the first arg from bounds is.
@@ -441,6 +426,11 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
             x1, y1, x2, y2 = direc_to_coords(x1, y1, x2, y2, self.direction)
             self.arrow(x1, y1, x2, y2)
 
+            # Update the config, so it will be written to plug-in-settings
+            self.config.set_property("angle", self.arrowangle)
+            self.config.set_property("size", self.arrowsize)
+            self.config.set_property("direction", self.direction)
+
             Gimp.displays_flush()
 
         # Whether just redrawn or not, schedule the next timeout
@@ -454,16 +444,6 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
                                 RGBA_IMAGE, 100, NORMAL_MODE)
         self.img.add_layer(self.layer, 0)
         Gimp.displays_flush()
-
-
-def arrow_designer(image, layer):
-    image.undo_group_start()
-
-    r = ArrowWindow(image)
-    Gtk.main()
-
-    # pdb.gimp_selection_none(image)
-    image.undo_group_end()
 
 
 def arrow_from_selection(img, layer, angle, size, direction) :
