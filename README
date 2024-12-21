@@ -4,9 +4,18 @@ These are all licensed under the GPL v2 or (at your option) any later GPL.
 There's further discussion of some of them on my software page:
 http://www.shallowsky.com/software/#gimp
 
-I'm working on translating these plug-ins to the new API in Gimp 2.99/3.0.
-That API isn't stable yet, but you'll find the plug-ins that have been
-translated so far under the "gimp3" directory.
+Python plug-ins in the gimp2 directory are for the classic GIMP 2.x API.
+GIMP 3.0 is in pre-release in late 2024 and will have its official release
+in early 2025, and its Python API has changed completely. (This is
+actually a good thing, despite the short-term irritation of having
+to rewrite everything.)
+I'm gradually migrating Python plug-ins to GIMP 3, putting them in the
+gimp3 directory. If you need a plug-in that hasn't been updated yet,
+email me or file an issue on GitHub and I'll get to it as soon as I can.
+
+Script-fu scripts (ending in .scm) mostly haven't been tested yet in GIMP3.
+I'm not sure if they work or not. If you need one of the script-fus
+updated, again, email me or file a GitHub issue.
 
 ===============
 SAVE/EXPORT PLUG-INS (PYTHON):
