@@ -26,7 +26,7 @@ class Pandora (Gimp.PlugIn):
         return True, 'gimp30-python', None
 
     def do_query_procedures(self):
-        return [ 'python-fu-pandora-combine' ]
+        return [ 'python-fu-pandora-panorama' ]
 
     def do_create_procedure(self, name):
         procedure = Gimp.ImageProcedure.new(self, name,
@@ -39,7 +39,7 @@ class Pandora (Gimp.PlugIn):
         procedure.set_documentation (_("Arrange layers as a panorama"),
                                      _("Arrange layers as a panorama"),
                                      name)
-        procedure.set_menu_label(_("_Pandora combine..."))
+        procedure.set_menu_label(_("_Pandora panorama..."))
         procedure.set_attribution("Akkana Peck",
                                   "Akkana Peck",
                                   "2025")
