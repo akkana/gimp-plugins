@@ -39,29 +39,57 @@ saver.py on Linux for GIMP 3.0:
     cp saver.py ~/.config/GIMP/3.0/plug-ins/saver
 
 ===============
-SAVE/EXPORT PLUG-INS (PYTHON):
+FAVORITE PLUG-INS (PYTHON):
 
-More info: http://www.shallowsky.com/software/gimp-save/
+(These are the plug-ins ported to GIMP 3 so far.)
 
 saver.py
-  Meant to be the One True Save/Export plug-in, on ctrl-S and ctrl-Shift-S.
+  (File->Saver and File->Saver as)
+  Meant to be the One True Save/Export plug-in, which you can
+  (if you choose) bind to ctrl-S and ctrl-Shift-S.
   It saves whether the type is XCF or other, it can automatically save
-  a copy in a different format, and it can even scale that copy and
-  remember the scaling.
+  an XCF plus a copy in a different format, and it can even scale that
+  copy and remember the scaling.
+  More info: http://www.shallowsky.com/software/gimp-save/
+
+arrowdesigner.py
+  (Filters->Render->Arrow Designer)
+  Interactively draw an arrow in a new layer, using a rectangular
+  selection as a guide.
+
+pandora.py
+  (Filters->Combine->Pandora panorama)
+  Stitch a series of images (loaded as layers in one image) into a panorama.
+  Doesn't do any smart matching based on the image contents; it just gives
+  you initial fixed spacing and layer masks; then you can drag the images
+  around to choose final placement, and edit the layer masks as needed.
+  More info: http://www.shallowsky.com/software/pandora/
+
+wallpaper.py
+  (Image->Selection to Wallpaper)
+  Make desktop wallpaper from the current image and selection.
+  It has a few screen size presets (e.g. 1920x1200, 1920x1080,
+  1680x1050, 1366x768, 1080x2400), and guesses which one to use
+  based on the spect ratio of the current selection.
+  It makes a new image containing only what's in the selection,
+  scales it to the right size, then
+  saves to a known place, defaulting to ~/Images/Backgrounds/1920x1200.
+
+  It's recommended that you set rect select presets for aspect ratios
+  like 16:8, 4:3, 1366:768, etc. if you make wallpapers often.
+
+blobi.py
+  Simple text effect similar to bevel and drop shadow, but more "blobby".
 
 ===============
-OTHER PYTHON PLUG-INS:
+OLDER PYTHON2 PLUG-INS:
+
+(These have not been ported to GIMP 3. If you need one of them ported,
+please file an issue or email me.)
 
 arclayer.py
   Bend a layer (e.g. a text layer) in a circular arc.
   Also a good demo of how to use pixel regions in Python.
-
-arrowdesigner.py
-  Interactively draw an arrow in a new layer, using a rectangular
-  selection as a guide.
-
-blobi.py
-  Text effect similar to bevel and drop shadow, but different.
 
 changefont.py
   Change font face and size for all text layers in the current image.
@@ -84,15 +112,10 @@ migrate-gimp-presets.py
 pyui.py
   Demonstrate all possible UI options for pygimp registration dialogs.
 
-wallpaper.py
-  Make wallpaper from the selection, based on aspect ratio.
-  Has a few screen size presets (e.g. 1366x768, 1680x1050) and
-  saves to a known place, e.g. ~/Backgrounds/1366/.
-  It's recommended that you set rect select presets for aspect ratios
-  like 16:8, 4:3, 1366:768 etc. in order to use this.
-
 ===============
 SCRIPT-FU:
+
+(None of these have been ported to GIMP 3.)
 
 arclayer.scm
   Bend a layer (e.g. a text layer) in a circular arc.
