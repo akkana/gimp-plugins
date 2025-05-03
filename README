@@ -18,6 +18,27 @@ I'm not sure if they work or not. If you need one of the script-fus
 updated, again, email me or file a GitHub issue.
 
 ===============
+INSTALLING PYTHON PLUG-INS:
+
+First, find your plug-ins directory. Edit->Preferences, then scroll
+down to Folders and expand it, scroll down again and click on Plug-ins.
+You can choose any of those folders, but most typically you'd pick the one
+that's in your user home directory, unless you're installing it for
+multiple users on the same system.
+
+Linux and Mac users will also have to make sure the plug-in is executable:
+chmod +x filename.py
+
+In GIMP 2.x, install a plug-in file by copying filename.py into
+your plug-ins directory.
+
+In GIMP 3.x, make a directory named the same as the filename, but
+without the .py, then copy the .py file into it. For instance, to install
+saver.py on Linux for GIMP 3.0:
+    mkdir ~/.config/GIMP/3.0/plug-ins/saver
+    cp saver.py ~/.config/GIMP/3.0/plug-ins/saver
+
+===============
 SAVE/EXPORT PLUG-INS (PYTHON):
 
 More info: http://www.shallowsky.com/software/gimp-save/
