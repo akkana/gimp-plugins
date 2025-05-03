@@ -4,11 +4,11 @@ These are all licensed under the GPL v2 or (at your option) any later GPL.
 There's further discussion of some of them on my software page:
 http://www.shallowsky.com/software/#gimp
 
-Python plug-ins in the gimp2 directory are for the classic GIMP 2.x API.
-GIMP 3.0 is in pre-release in late 2024 and will have its official release
-in early 2025, and its Python API has changed completely. (This is
-actually a good thing, despite the short-term irritation of having
-to rewrite everything.)
+Python plug-ins in the gimp2 directory are for the classic GIMP 2.x API
+(which also requires that you have python2 and pygtk installed).
+GIMP 3.0 is now out, and its Python API has changed completely.
+(This is actually a good thing, despite the short-term irritation of
+having to rewrite everything.)
 I'm gradually migrating Python plug-ins to GIMP 3, putting them in the
 gimp3 directory. If you need a plug-in that hasn't been updated yet,
 email me or file an issue on GitHub and I'll get to it as soon as I can.
@@ -48,11 +48,6 @@ saver.py
   It saves whether the type is XCF or other, it can automatically save
   a copy in a different format, and it can even scale that copy and
   remember the scaling.
-
-save-export-clean.py
-  Save or export, marking the current image clean.
-  This was an initial quick hack for people who dislike the Save vs. Export
-  split introduced in GIMP 2.8; it's mostly obsoleted now by Saver.
 
 ===============
 OTHER PYTHON PLUG-INS:
