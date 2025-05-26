@@ -365,14 +365,21 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
         # autocrop_layer crops the current layer using the layer
         # passed in as its crop template -- not clear from the doc.
         self.img.active_layer = self.layer
-        pdb = Gimp.get_pdb()
-        pdb_proc = pdb.lookup_procedure('plug-in-autocrop-layer')
-        pdb_config = pdb_proc.create_config()
-        pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
-        pdb_config.set_property('image', self.img)
-        pdb_config.set_property('drawable', self.layer)
 
-        result = pdb_proc.run(pdb_config)
+        # As of GIMP 3.0.4, Gimp.get_pdb() is returning None,
+        # so we can no longer crop the arrow layer. :-{
+        try:
+            pdb = Gimp.get_pdb()
+            pdb_proc = pdb.lookup_procedure('plug-in-autocrop-layer')
+            pdb_config = pdb_proc.create_config()
+            pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
+            pdb_config.set_property('image', self.img)
+            pdb_config.set_property('drawable', self.layer)
+            result = pdb_proc.run(pdb_config)
+        except Exception as e:
+            errstr = "Can't crop arrow layer: get_pdb() is failing: " + str(e)
+            print(errstr, sys.stderr)
+            Gimp.message(errstr)
 
         # Unreference image and layer references to try to avoid
         # gimp_plug_in_destroy_proxies: ERROR: GimpImage proxy with ID 1 was refed by plug-in, it MUST NOT do that!
