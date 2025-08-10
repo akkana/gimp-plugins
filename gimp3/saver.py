@@ -62,6 +62,9 @@ DEBUG = False
 
 def print_value_array(va):
     print("ValueArray", va, ":", file=sys.stderr)
+    if not va:
+        print(va)
+        return
     for i in range(va.length()):
         print("  ", va.index(i), file=sys.stderr)
 
@@ -223,7 +226,7 @@ class SaverPlugin(Gimp.PlugIn):
         if is_xcf(filepath):
             image.set_file(Gio.File.new_for_path(filepath))
         else:
-            print("Saver: Don't know how to set export file yet")
+            print("Saver: Don't know how to set export filename yet")
 
         image.clean_all()
 
@@ -452,7 +455,7 @@ class SaverPlugin(Gimp.PlugIn):
                       file=sys.stderr)
                 print_value_array(copyres)
             # Did it succeed?
-            if copyres.index(0) == Gimp.PDBStatusType.SUCCESS:
+            if not copyres or copyres.index(0) == Gimp.PDBStatusType.SUCCESS:
                 chooser.destroy()
                 return mainres
                 # return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS,
