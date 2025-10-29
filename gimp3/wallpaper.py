@@ -8,7 +8,7 @@
 # It will make a cropped, scaled copy which you can save as you choose.
 #
 
-# Copyright 2009,2023 by Akkana Peck, http://www.shallowsky.com/software/
+# Copyright 2009,2023,2025 by Akkana Peck, http://www.shallowsky.com/software/
 # You may use and distribute this plug-in under the terms of the GPL v2
 # or, at your option, any later GPL version.
 
@@ -110,8 +110,7 @@ class WallpaperPlugin(Gimp.PlugIn):
         return procedure
 
     def wallpaper_dialog(self, procedure, run_mode, img,
-                         n_drawables, drawables,
-                         args, data):
+                         drawables, config, data):
         # Get bounds of selection.
         dummy, exists, x1, y1, x2, y2 = Gimp.Selection.bounds(img)
         sel_aspect = float(x2 - x1) / (y2 - y1)
@@ -192,23 +191,19 @@ class WallpaperPlugin(Gimp.PlugIn):
         # valarray.index(0) is return status, hopefully 1 is the new image
         newimg = valarray.index(1)
 
-        pdb_proc = pdb.lookup_procedure('gimp-image-get-metadata')
-        pdb_config = pdb_proc.create_config()
-        # pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
-        pdb_config.set_property('image', img)
-        valarray = pdb_proc.run(pdb_config)
-        if valarray.index(0) == Gimp.PDBStatusType.SUCCESS:
-            metadata = valarray.index(1)
-            # print("Read metadata", metadata)
-
-            pdb_proc = pdb.lookup_procedure('gimp-image-set-metadata')
-            pdb_config = pdb_proc.create_config()
-            # pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
-            pdb_config.set_property('image', newimg)
-            pdb_config.set_property('metadata-string', metadata)
-            pdb_proc.run(pdb_config)
-        else:
-            print("Couldn't get image metadata")
+        # Copy metadata from the old image to the new one, except for
+        # things like the self-referential image parameter.
+        metadata = img.get_metadata()
+        if metadata:
+            print("Read metadata", metadata)
+            # Copy the old metadata to the new image.
+            # XXX Do we need to change the pixel size, or will that happen
+            # automatically when the image is scaled?
+            # There's no way to get ALL metadata,
+            # apparently you have to iterate over EXIF, XMP and IPTC, see:
+            # https://gnome.pages.gitlab.gnome.org/gexiv2/docs/latest/ch01.html
+            # e.g. m.get_exif_tags() now works
+            newimg.set_metadata(metadata)
 
         # Paste-as-new may create an image with transparency,
         # which will warn if you try to save as jpeg, so:
@@ -305,28 +300,14 @@ class WallpaperPlugin(Gimp.PlugIn):
                 Gtk.main_iteration()
 
             try:
-                # print("GIMP images now:")
-                # for i in Gimp.list_images():
-                #     print(i.get_name(), i.get_width(), i.get_height())
-                #     for l in i.list_layers():
-                #         print("  ", l.get_width(), l.get_height())
                 pdb_proc = pdb.lookup_procedure('gimp-file-save')
                 pdb_config = pdb_proc.create_config()
                 pdb_config.set_property('run-mode', Gimp.RunMode.NONINTERACTIVE)
                 pdb_config.set_property('image', newimg)
-                layers = newimg.list_selected_layers()
+                layers = newimg.get_selected_layers()
                 # print("\nSaving new image", newimg.get_name(),
                 #       newimg.get_width(), "x", newimg.get_height(),
                 #       "to", pathname)
-                # for l in layers:
-                #     print("    layer:", l.get_width(), "x", l.get_height())
-                # print()
-                # The image only has one layer, but this is a lot easier
-                # than trying to find and save the active layer.
-                pdb_config.set_property('num-drawables', len(layers))
-                pdb_config.set_property('drawables',
-                                        Gimp.ObjectArray.new(Gimp.Drawable,
-                                                             layers, False))
                 pdb_config.set_property('file', Gio.File.new_for_path(pathname))
                 vals = pdb_proc.run(pdb_config)
                 if vals.index(0) == Gimp.PDBStatusType.SUCCESS:
