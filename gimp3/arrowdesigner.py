@@ -120,7 +120,6 @@ def python_fu_arrow_from_selection(img, layer, arrowangle, arrowsize,
     # Save the current selection:
     savesel = img.get_selection().save(img)   # a Gimp.Channel object
     Gimp.Selection.none(img)
-    sys.stdout.flush()
 
     aangle = arrowangle * math.pi / 360.
 
@@ -147,9 +146,7 @@ def python_fu_arrow_from_selection(img, layer, arrowangle, arrowsize,
         if cyc > 0: cycl_grad = int((l_arrow - l_head)/cyc)
         elif cyc == 0: cycl_grad = 0
 
-        # TypeError: Gimp.paintbrush() takes exactly 5 arguments (6 given)
-        Gimp.paintbrush(layer, 0, strokes, Gimp.StrokeMethod.LINE,
-                        cycl_grad)
+        Gimp.paintbrush(layer, 0, strokes, Gimp.StrokeMethod.LINE, cycl_grad)
 
     #
     # Now make the arrowhead
@@ -184,6 +181,9 @@ def python_fu_arrow_from_selection(img, layer, arrowangle, arrowsize,
 
     # Restore the old selection
     img.select_item(Gimp.ChannelOps.REPLACE, savesel)
+
+    # and delete the temporary channel
+    img.remove_channel(savesel)
 
     savesel = None
     img = None
@@ -417,7 +417,6 @@ Uses the selection, Paintbrush brush foreground color and gradient.""")
         dummy, exists, x1, y1, x2, y2 = newbounds
         if exists and (self.changed or newbounds != self.bounds):
             self.bounds = newbounds
-            sys.stdout.flush()
             self.changed = False
             self.layer.fill(Gimp.FillType.TRANSPARENT)
 
