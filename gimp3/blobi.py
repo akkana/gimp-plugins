@@ -27,7 +27,20 @@ from gi.repository import Gio
 import time
 import sys
 
-from gimphelpers import pdb_run
+
+def pdb_run(name, argdic):
+    """Run something from the GIMP PDB.
+       args should be a dictionary of the properties for the given PDB proc.
+    """
+    pdb_proc = Gimp.get_pdb().lookup_procedure(name)
+    pdb_config = pdb_proc.create_config()
+    for key in argdic:
+        if type(argdic[key]) is list:
+            pdb_config.set_core_object_array(key, argdic[key])
+        else:
+            pdb_config.set_property(key, argdic[key])
+    pdb_proc.run(pdb_config)
+
 
 def N_(message): return message
 def _(message): return GLib.dgettext(None, message)
